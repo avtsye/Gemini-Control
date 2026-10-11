@@ -22,9 +22,12 @@ class UIContract(unittest.TestCase):
   self.assertIn('aria-label="הודעה"',self.html)
   self.assertIn('aria-label="שלח"',self.html)
  def test_dom_targets_exist(self):
-  dynamic=set(re.findall(r"\.id\s*=\s*[\\\'\\\"]([A-Za-z][\\w-]*)[\\\'\\\"]",self.html))
-  for element in set(re.findall(r"\$\('([a-zA-Z][\w-]*)'\)",self.html)):
-   with self.subTest(id=element):self.assertIn(element,set(self.parser.ids)|dynamic)
+  for element in set(re.findall(r"\\$\\('([a-zA-Z][\\w-]*)'\\)",self.html)):
+   with self.subTest(id=element):
+    self.assertTrue(element in self.parser.ids or
+                    ".id='"+element+"'" in self.html or
+                    '.id="'+element+'"' in self.html,
+                    "Missing static or dynamically created ID: "+element)
  def test_webchannel_methods_exist(self):
   methods=set(re.findall(r"call\('([a-z_]+)'",self.html))
   decorators=set(re.findall(r"@Slot\([^\n]*?result=str\)\s+def ([a-z_]+)\(",self.shell))
