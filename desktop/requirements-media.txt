@@ -5,3 +5,9 @@ pypdfium2>=4.30,<6
 faster-whisper>=1.1,<2
 # Tesseract executable + Hebrew traineddata and FFmpeg must be installed separately.
 # Whisper models must already exist locally; Gemini-Control never downloads one automatically.
+
+# Optional offline embedding search (user-supplied local model):
+sentence-transformers>=3,<6
+# Optional local image generation (user-supplied Diffusers model):
+diffusers>=0.30,<1
+# Install an appropriate Torch build separately for the target Windows CPU/GPU.
