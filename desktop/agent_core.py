@@ -36,6 +36,12 @@ class DesktopAgent:
             if tool == "create_zip":
                 return create_zip(self.workspace,args.get("sources"),args.get("target"),self.approval)
             return extract_zip(self.workspace,args.get("archive"),args.get("destination"),self.approval)
+        if tool in {"image_info","convert_image"}:
+            from image_tools import image_info,convert_image
+            if tool=="image_info":
+                return image_info(self.workspace,args.get("name"),self.approval)
+            return convert_image(self.workspace,args.get("source"),args.get("target"),self.approval,
+                                 args.get("max_width",1920),args.get("max_height",1920))
         if tool in {"search_workspace","convert_data"}:
             from workspace_data import search_workspace,convert_data
             if tool=="search_workspace":
