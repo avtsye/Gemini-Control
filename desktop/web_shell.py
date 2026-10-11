@@ -101,8 +101,16 @@ class Bridge(QObject):
  @Slot(result=str)
  def pick_attachment(self):
   if self.busy:return self.encode({"error":"המתן לסיום הבקשה"})
-  path,_=QFileDialog.getOpenFileName(None,"בחר קובץ לשיחה","","מסמכים ותמונות (*.txt *.md *.csv *.json *.py *.pdf *.docx *.png *.jpg *.jpeg);;כל הקבצים (*)")
-  if not path:return self.encode({"cancelled":True})
+  paths,_=QFileDialog.getOpenFileNames(None,"בחר קבצים לשיחה","","מסמכים (*.txt *.md *.csv *.json *.py *.pdf *.docx);;כל הקבצים (*)")
+  if not paths:return self.encode({"cancelled":True})
+  added=[]
+  for path in paths[:12]:
+   item=json.loads(self.add_attachment_path(path))
+   if item.get("error"):return self.encode({"error":item["error"],"added":added})
+   added.append(item)
+  return self.encode({"items":added,"pending":len(self.attachments)})
+ @Slot(str,result=str)
+ def add_attachment_path(self,path):
   file=Path(path)
   if not file.is_file() or file.stat().st_size>5_000_000:
    return self.encode({"error":"אפשר לצרף קובץ עד 5MB בלבד"})
@@ -120,6 +128,7 @@ class Bridge(QObject):
    else:
     body=file.read_text(encoding="utf-8",errors="replace")
    body=body[:18000]
+   if len(self.attachments)>=12:return self.encode({"error":"ניתן לצרף עד 12 קבצים"})
    self.attachments.append({"name":file.name,"text":body})
    return self.encode({"name":file.name,"characters":len(body),"pending":len(self.attachments)})
   except Exception as exc:return self.encode({"error":"לא ניתן לקרוא את הקובץ: "+str(exc)[:150]})
