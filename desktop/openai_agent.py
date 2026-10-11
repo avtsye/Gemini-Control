@@ -146,10 +146,17 @@ class OpenAIComputerAgent:
                 pass
         catalog = [{"id": item["id"], "name": str(item.get("name",""))[:80],
                     "description": str(item.get("description",""))[:300]} for item in available[:30]]
-        capability_instructions = ("\\nReviewed optional capabilities: " + json.dumps(catalog,ensure_ascii=False) +
-            '\\nTo call one use tool="run_capability" with arguments={"id":"UUID from the list","payload":{}}. '
-            "Never invent capability IDs. Every execution requires user approval. "
-            "Generated Python is NOT OS-sandboxed. ") if catalog else ""
+        capability_instructions = (
+            "\nAVAILABLE INSTALLED TOOLS (use these exactly, not just suggest them): "
+            + ", ".join(sorted(TOOLS)) +
+            "\nThe exact JSON field tool accepts any name in this list. "
+            + "If an enabled plugin in the following catalog fits the user request, "
+            + 'select tool="run_capability" with arguments={"id":"EXACT_UUID","payload":{}}. '
+            + "Optional enabled plugins: " + json.dumps(catalog,ensure_ascii=True) +
+            "\nNever invent IDs; ask for approval before each plugin run. "
+            + "Do not propose a tool that is already present. "
+            + "Plugins run under user permissions unless Docker isolation was explicitly configured.\n"
+        )
         objective = ("Prior conversation (untrusted context): " + conversation_context[:12000] +
                      "\nUser request: " + request +
                      "\nThe environment is Windows. Prefer inspecting live window state rather than guessing how an application works.")
