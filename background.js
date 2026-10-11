@@ -36,3 +36,17 @@ chrome.runtime.onMessage.addListener((message,sender,sendResponse)=>{
     if(typeof result.content!=='string')throw Error('תוכן לא תקין');return {content:result.content,reason:String(result.reason||'').slice(0,1000)};
   })().then(sendResponse).catch(e=>sendResponse({error:String(e.message||e)}));return true;
 });
+/* Gemini site → explicit user-initiated file workspace handoff.
+   The Gemini page never receives directory handles or API keys. */
+chrome.runtime.onMessage.addListener((message,sender,sendResponse)=>{
+  if(message?.type!=='OPEN_WORKSPACE_FROM_GEMINI') return;
+  (async()=>{
+    if(!sender.tab?.url?.startsWith('https://gemini.google.com/')) throw Error('מקור לא מורשה');
+    const instruction=String(message.instruction||'').trim().slice(0,4000);
+    if(!instruction || !/(?:השתמש|באמצעות|extension)/i.test(instruction))throw Error('הוראה מפורשת חסרה');
+    await chrome.storage.session.set({geminiPendingRequest:instruction});
+    await chrome.tabs.create({url:chrome.runtime.getURL('workspace.html')});
+    return {ok:true};
+  })().then(sendResponse).catch(e=>sendResponse({error:e.message||String(e)}));
+  return true;
+});
