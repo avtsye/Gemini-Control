@@ -38,3 +38,40 @@ def ocr_image(workspace,source,target,approve,language="heb+eng"):
     dst.parent.mkdir(parents=True,exist_ok=True)
     with dst.open("x",encoding="utf-8") as output:output.write(proc.stdout)
     return {"created_text":str(dst),"characters":len(proc.stdout)}
+
+def ocr_pdf(workspace,source,target,approve,language="heb+eng",max_pages=12):
+    """Extract text from locally rendered scanned PDF with optional PDFium + Tesseract."""
+    src=safe_path(workspace,source)
+    dst=safe_path(workspace,target)
+    if not src.is_file() or src.suffix.lower()!=".pdf" or src.stat().st_size>60_000_000:
+        raise ValueError("Expected a local PDF below 60 MB")
+    if dst.suffix.lower()!=".txt" or dst.exists():
+        raise ValueError("Destination must be a new TXT file")
+    if language not in {"heb","eng","heb+eng"} or not isinstance(max_pages,int) or not 1<=max_pages<=40:
+        raise ValueError("Invalid OCR settings")
+    engine=ocr_engines()
+    if not engine["available"] or (language.startswith("heb") and not engine.get("hebrew")):
+        return {"unavailable":"Tesseract with requested language is required"}
+    try:
+        import pypdfium2 as pdfium
+    except ImportError:
+        return {"unavailable":"PDF rendering dependency pypdfium2 is missing"}
+    if not approve("לבצע OCR לספר PDF מקומי ולהפיק ממנו קובץ טקסט?"):
+        return {"cancelled":True}
+    import tempfile
+    pdf=pdfium.PdfDocument(str(src))
+    pages=min(len(pdf),max_pages)
+    results=[]
+    with tempfile.TemporaryDirectory() as tmp:
+        for index in range(pages):
+            page=pdf[index]
+            bitmap=page.render(scale=1.6)
+            path=Path(tmp)/("page-"+str(index)+".png")
+            bitmap.to_pil().save(path)
+            process=subprocess.run([shutil.which("tesseract"),str(path),"stdout","-l",language],
+                capture_output=True,text=True,encoding="utf-8",errors="replace",timeout=90,shell=False)
+            if process.returncode:return {"error":"OCR failed on page "+str(index+1),"details":process.stderr[-500:]}
+            results.append(process.stdout.strip())
+    dst.parent.mkdir(parents=True,exist_ok=True)
+    with dst.open("x",encoding="utf-8") as stream:stream.write("\n\n".join(results))
+    return {"created_text":str(dst),"pages":pages,"truncated":len(pdf)>pages}
