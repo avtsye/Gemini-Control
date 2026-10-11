@@ -10,7 +10,7 @@ class WorkspaceDataTests(unittest.TestCase):
    result=search_workspace(root,"שלום",lambda _:True)
    self.assertEqual(len(result["matches"]),1)
    convert_data(root,"data.csv","data.json",lambda _:True)
-   self.assertEqual(json.loads((root/"data.json").read_text())[0]["score"],"4")
+   self.assertEqual(json.loads((root/"data.json").read_text(encoding="utf-8"))[0]["score"],"4")
    convert_data(root,"data.json","copy.csv",lambda _:True)
    self.assertIn("שלום",(root/"copy.csv").read_text(encoding="utf-8-sig"))
  def test_refuse_overwrite_and_escape(self):
