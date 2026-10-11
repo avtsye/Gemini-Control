@@ -88,6 +88,19 @@
     }catch(e){status.textContent=e.message||String(e)}
     finally{execute.disabled=false}
   };
+
+  // When a user explicitly opts in, prepare the tool contract upon Enter.
+  // Stop the first submission so they can review the attached instructions.
+  document.addEventListener('keydown',event=>{
+    if(event.key!=='Enter'||event.shiftKey||event.ctrlKey||event.metaKey||event.isComposing)return;
+    const editor=composer();
+    if(!editor||!(editor===event.target||editor.contains(event.target)))return;
+    const request=getText(editor);
+    if(!trigger.test(request)||request.includes('GEMINI_CONTROL_ACTION'))return;
+    event.preventDefault();event.stopImmediatePropagation();
+    prepare.click();
+    status.textContent='צורפה הנחיית התוסף. בדוק ושלח שוב ב-Enter.';
+  },true);
   scan();
   // Gemini renders its answers asynchronously and its DOM can change across releases.
   // Polling is a fallback, never a trigger for execution.
