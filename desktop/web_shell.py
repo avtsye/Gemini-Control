@@ -308,6 +308,11 @@ class Bridge(QObject):
   except (ValueError,OSError,PermissionError,SyntaxError) as e:return self.encode({"error":str(e)})
 
  @Slot(str,result=str)
+ def capability_analyze_dependencies(self,identifier):
+  try:return self.encode(self.workshop.analyze_dependencies(identifier))
+  except (ValueError,OSError,ImportError) as e:return self.encode({"error":str(e)})
+
+ @Slot(str,result=str)
  def capability_dependency_status(self,identifier):
   try:return self.encode(self.workshop.dependency_status(identifier))
   except (ValueError,OSError) as e:return self.encode({"error":str(e)})
