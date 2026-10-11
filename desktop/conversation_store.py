@@ -1,5 +1,6 @@
 """Local conversation history and reviewed capability proposals. No executable plugins."""
 import json,os,sqlite3,uuid
+from contextlib import contextmanager
 from pathlib import Path
 from datetime import datetime,timezone
 
@@ -26,10 +27,15 @@ class ConversationStore:
                     created TEXT NOT NULL);
                 CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages(conversation_id,id);
             """)
+    @contextmanager
     def _db(self):
         db=sqlite3.connect(self.path,timeout=10)
-        db.execute("PRAGMA foreign_keys=ON")
-        return db
+        try:
+            db.execute("PRAGMA foreign_keys=ON")
+            with db:
+                yield db
+        finally:
+            db.close()
     def create(self,title="שיחה חדשה"):
         identifier=str(uuid.uuid4())
         timestamp=datetime.now(timezone.utc).isoformat()
