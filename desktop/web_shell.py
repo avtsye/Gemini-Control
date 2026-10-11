@@ -171,6 +171,17 @@ class Bridge(QObject):
   if not self.auth.access_token:return self.encode({"error":"יש להתחבר תחילה ל־ChatGPT"})
   if not isinstance(text,str) or not text.strip() or len(text)>25000:return self.encode({"error":"הודעה לא תקינה"})
   if not model:return self.encode({"error":"בחר מודל"})
+  import re
+  # A plain-language request can start the same reviewed capability workshop
+  # as the dedicated UI. Never silently enable or execute generated code.
+  if agent_mode and not self.attachments and re.search(
+       r"(?:תוסיף|הוסף|תיצור|צור|תבנה|בנה)\\s+(?:לי\\s+)?(?:יכולת|הרחבה|תוסף|מודול)",text):
+   if model not in [slug for slug,_ in self.available_models]:
+    return self.encode({"error":"מודל לא זמין"})
+   result=json.loads(self.generate_capability(text,model))
+   if not result.get("error"):
+    self.store.add(self.chat_id,"user",text)
+   return self.encode(result)
   chat_id=self.chat_id
   files=self.attachments[:]
   self.attachments.clear()
