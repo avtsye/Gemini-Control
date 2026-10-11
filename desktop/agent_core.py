@@ -38,6 +38,15 @@ class DesktopAgent:
         if not self.enabled:
             raise PermissionError("Agent is paused")
         args = arguments if isinstance(arguments, dict) else {}
+        if tool=="windows_snapshot":
+            from windows_state import windows_snapshot
+            return {"windows":windows_snapshot()}
+        if tool=="inspect_window":
+            from windows_state import inspect_window
+            return inspect_window(args.get("handle"))
+        if tool=="activate_control":
+            from windows_state import activate_control
+            return activate_control(args.get("handle"),args.get("automation_id"),args.get("expected_name"),self.approval)
         if tool in {"screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft"}:
             from computer_tools import computer_action
             return computer_action(tool,args,self.workspace,self.approval)
