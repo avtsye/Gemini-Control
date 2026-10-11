@@ -22,11 +22,12 @@ textarea{resize:none;border:0;outline:none;width:100%;min-height:55px;max-height
 dialog{border:1px solid var(--border);border-radius:17px;width:min(710px,92vw);max-height:80vh;padding:22px;box-shadow:0 18px 80px #0003}dialog::backdrop{background:#0006}dialog h2{margin-top:0}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f7f7;padding:13px;border-radius:10px;max-height:260px;overflow:auto}.muted{color:var(--muted)}
 @media(max-width:780px){.side{width:180px;min-width:150px}.toolbar{padding:0 8px;flex-wrap:wrap;height:auto;min-height:65px}.toolbar .name{display:none}.messages{padding:12px}.composer-wrap{padding:10px}}
 .toast-area{position:fixed;top:18px;left:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;max-width:min(420px,90vw);pointer-events:none}.toast{pointer-events:auto;background:#202733;color:#fff;border-radius:14px;padding:14px 18px;box-shadow:0 12px 35px #0003;display:flex;align-items:center;gap:12px;line-height:1.6;border-right:4px solid #6fa1ff}.toast.error{border-right-color:#e76666}.toast.success{border-right-color:#51be87}.toast button{margin-right:auto;color:#fff;padding:3px 8px}.dialog-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px}.primary-action{background:#232323;color:#fff}.primary-action:hover{background:#454545}
+.activity{font-size:12px;color:#687282;display:flex;align-items:center;gap:8px;padding:8px 16px}.activity-dot{width:8px;height:8px;border-radius:50%;background:#8b929d}.activity.running .activity-dot{background:#25a776;animation:pulse 1.3s infinite}@keyframes pulse{50%{opacity:.2;transform:scale(.7)}}.file-chips{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px}.file-chip{padding:6px 10px;border-radius:10px;background:#edf3fc;color:#2b4e73;font-size:12px}.small-action{padding:7px 10px;border:1px solid #e1e5eb;border-radius:12px}
 </style></head><body><div class="shell">
 <aside class="side"><div class="brand">AI Control</div><button class="item" id="new">＋ שיחה חדשה</button><div class="section">השיחות שלך</div><div id="chats"></div><div class="side-actions"><button class="item" id="capabilities">✦ סדנת יכולות חדשות</button><button class="item" id="extensions">◈ הרחבות</button><button class="item" id="proposals">◇ הצעות לשיפור</button><button class="item" id="delete">⌫ מחק שיחה</button></div></aside>
-<main class="main"><div class="toolbar"><span class="name">AI Control Desktop</span><button class="pill" id="login">התחבר ל־ChatGPT</button><select id="models" aria-label="מודל"></select><button class="pill" id="stop">עצור סוכן</button><span id="state">לא מחובר</span></div>
+<main class="main"><div class="toolbar"><span class="name">AI Control Desktop</span><button class="pill" id="account">החשבון שלי</button><button class="pill" id="login">התחבר ל־ChatGPT</button><select id="models" aria-label="מודל"></select><button class="pill" id="stop">עצור סוכן</button><span id="state">לא מחובר</span></div>
 <div class="messages" id="scroll"><div class="thread" id="thread"><div class="welcome">איך אפשר לעזור היום?</div></div></div>
-<div class="composer-wrap"><div class="composer"><textarea id="prompt" placeholder="שלח הודעה או בקש לבצע פעולה במחשב…" aria-label="הודעה"></textarea><div class="compose-actions"><label class="toggle"><input type="checkbox" id="agent" checked> מצב סוכן מחשב</label><button class="send" id="send" aria-label="שלח">↑</button></div></div></div></main></div>
+<div class="composer-wrap"><div id="activity" class="activity"><span class="activity-dot"></span><span id="activityText">מוכן לשיחה</span></div><div class="composer"><div id="fileChips" class="file-chips"></div><textarea id="prompt" placeholder="שלח הודעה או בקש לבצע פעולה במחשב…" aria-label="הודעה"></textarea><div class="compose-actions"><button class="small-action" id="attach" title="צרף מסמך" aria-label="צרף מסמך">📎 צרף קובץ</button><label class="toggle"><input type="checkbox" id="agent" checked> מצב סוכן מחשב</label><button class="send" id="send" aria-label="שלח">↑</button></div></div></div></main></div>
 <div id="toastArea" class="toast-area" role="status" aria-live="polite"></div><dialog id="confirmDialog" aria-labelledby="confirmTitle"><h2 id="confirmTitle">אישור פעולה</h2><p id="confirmText"></p><div class="dialog-actions"><button id="confirmCancel">ביטול</button><button class="primary-action" id="confirmAccept">אישור</button></div></dialog><dialog id="modal"><h2 id="modalTitle"></h2><div id="modalBody"></div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:15px"><button id="close">סגור</button></div></dialog>
 <script src="qrc:///qtwebchannel/qwebchannel.js"></script><script>
 let bridge=null;let working=false;
@@ -49,6 +50,7 @@ function askConfirm(message){return new Promise(resolve=>{
 })}
 function call(method,...args){return new Promise((resolve,reject)=>{if(!bridge)return reject(Error("החיבור למחשב אינו זמין"));bridge[method](...args,r=>{try{if(typeof r!=='string'||!r.trim())throw Error('הפעולה לא החזירה תשובה. נסה לעדכן את התוכנה.');const data=JSON.parse(r);if(data.error)reject(Error(data.error));else resolve(data)}catch(e){reject(e)}})})}
 function status(value){$('state').textContent=value}
+function activity(value,running=false){$('activityText').textContent=value;$('activity').classList.toggle('running',running)}
 function addMessage(role,text){const thread=$('thread');thread.querySelector('.welcome')?.remove();const item=document.createElement('div');item.className='msg '+role;const label=document.createElement('div');label.className='label';label.textContent=role==='user'?'אתה':role==='assistant'?'ChatGPT':'מערכת';item.append(label,document.createTextNode(text));thread.append(item);$('scroll').scrollTop=$('scroll').scrollHeight}
 async function loadChats(){const data=await call('chats');const box=$('chats');box.replaceChildren();for(const chat of data.items){const b=document.createElement('button');b.className='item'+(chat.id===data.active?' active':'');b.textContent=chat.title;b.onclick=()=>call('select_chat',chat.id).then(showChat).catch(e=>status(e.message));box.append(b)}}
 function showChat(data){$('thread').replaceChildren();if(data.messages.length){for(const m of data.messages)addMessage(m.role,m.content)}else{const h=document.createElement('div');h.className='welcome';h.textContent='איך אפשר לעזור היום?';$('thread').append(h)}loadChats()}
@@ -103,7 +105,10 @@ $('delete').onclick=async()=>{if(await askConfirm('למחוק את השיחה ה
 $('extensions').onclick=()=>extensions().catch(e=>notify(e.message,'error'));
 $('capabilities').onclick=()=>capabilityWorkshop().catch(e=>notify(e.message,'error'));
 $('proposals').onclick=()=>proposals().catch(e=>notify(e.message,'error'));
-$('login').onclick=()=>call('login').catch(e=>status(e.message));
+$('login').onclick=()=>{activity('פותח התחברות…',true);call('login').catch(e=>{status(e.message);activity('התחברות נכשלה')})};
+$('account').onclick=async()=>{try{const a=await call('account_details');const body=modal('החשבון והנתונים שלי');element('p',a.connected?'מחובר ל־ChatGPT':'לא מחובר',body);element('p','כתובת חשבון: '+a.email,body);element('p','מספר מודלים זמינים: '+a.model_count,body);element('p','מודלים: '+(a.models.join(', ')||'לא זמין'),body);element('p','נתוני שימוש: '+a.usage,body);element('p','מסד השיחות: '+a.history_path,body);element('p','יכולות מותקנות: '+a.capability_count,body)}catch(e){notify(e.message,'error')}};
+$('attach').onclick=async()=>{activity('בוחר ומעבד קובץ…',true);try{const a=await call('pick_attachment');if(a.cancelled){activity('מוכן לשיחה');return}const chip=element('span','📄 '+a.name+' · '+a.characters+' תווים',$('fileChips'));chip.className='file-chip';activity('קובץ מוכן לשליחה · המידע לא הועבר עדיין למודל');}catch(e){notify(e.message,'error');activity('קריאת הקובץ נכשלה')}};
+
 $('stop').onclick=()=>call('toggle_agent').then(x=>status(x.message));
 $('send').onclick=send;
 $('prompt').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}};
@@ -112,14 +117,14 @@ if(working)return;
 const text=$('prompt').value.trim();
 if(!text)return;
 if(!$('models').value){status('יש להתחבר ולבחור מודל לפני השליחה');return}
-working=true;$('send').disabled=true;
+working=true;$('send').disabled=true;activity('שולח למודל…',true);
 try{
   await call('send',text,$('models').value,$('agent').checked);
-  $('prompt').value='';
+  $('prompt').value='';$('fileChips').replaceChildren();
   addMessage('user',text);
-  if(working)status('הסוכן עובד…');
+  if(working){status('הסוכן עובד…');activity('הסוכן מתכנן ומבצע שלבים…',true)}
 }catch(e){
-  status('שליחה נכשלה: '+e.message);
+  status('שליחה נכשלה: '+e.message);activity('שליחה נכשלה');
   working=false;$('send').disabled=false;
 }}
 function updateModels(models){const select=$('models');select.replaceChildren();for(const m of models){const o=document.createElement('option');o.value=m[0];o.textContent=m[1];select.append(o)}}
@@ -138,5 +143,5 @@ if(!window.qt||!qt.webChannelTransport){status('גשר Windows אינו זמין
     catch(e){notify(e.message,'error')}
   }};
  }
-}if(msg.type==='approval'){askConfirm(msg.description).then(ok=>call('approval_reply',ok).catch(e=>notify(e.message,'error')))}if(msg.type==='message')addMessage(msg.role,msg.text);if(msg.type==='models'){updateModels(msg.models);status(msg.status)}if(msg.type==='status')status(msg.text);if(msg.type==='finished'){working=false;$('send').disabled=false;loadChats()}});call('session').then(d=>{updateModels(d.models);status(d.status)});call('chats').then(d=>call('select_chat',d.active).then(showChat));});
+}if(msg.type==='approval'){activity('ממתין לאישור פעולה…',true);askConfirm(msg.description).then(ok=>call('approval_reply',ok).catch(e=>notify(e.message,'error')))}if(msg.type==='message')addMessage(msg.role,msg.text);if(msg.type==='models'){updateModels(msg.models);status(msg.status)}if(msg.type==='status'){status(msg.text);activity(msg.text,false)}if(msg.type==='finished'){working=false;$('send').disabled=false;activity('הפעולה הסתיימה');loadChats()}});call('session').then(d=>{updateModels(d.models);status(d.status)});call('chats').then(d=>call('select_chat',d.active).then(showChat));});
 </script></body></html>
