@@ -1,7 +1,7 @@
 """HTML-backed ChatGPT desktop shell with Qt WebChannel. Native execution remains approval gated."""
 import json,sys,threading
 from pathlib import Path
-from PySide6.QtCore import QObject,Signal,Slot,QUrl,Qt
+from PySide6.QtCore import QObject,Signal,Slot,QUrl,Qt,QTimer
 from PySide6.QtWidgets import QApplication,QMainWindow,QFileDialog
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebChannel import QWebChannel
@@ -10,6 +10,7 @@ from openai_agent import OpenAIComputerAgent
 from conversation_store import ConversationStore
 from extensions import ExtensionManager
 from capability_workshop import CapabilityWorkshop
+from reminder_store import ReminderStore
 
 class Events(QObject):
  message=Signal(str,str)
@@ -27,6 +28,10 @@ class Bridge(QObject):
   self.store=ConversationStore()
   self.extension_manager=ExtensionManager()
   self.workshop=CapabilityWorkshop()
+  self.reminder_store=ReminderStore()
+  self.reminder_timer=QTimer(self)
+  self.reminder_timer.timeout.connect(self._poll_reminders)
+  self.reminder_timer.start(30000)
   self.chat_id=self.store.chats()[0][0] if self.store.chats() else self.store.create()
   self.auth=ChatGPTSignIn()
   self.events=Events()
@@ -349,6 +354,24 @@ class Bridge(QObject):
    return self.encode({"id":identifier})
   except (OSError,ValueError) as e:return self.encode({"error":str(e)})
 
+ def _poll_reminders(self):
+  try:
+   for reminder in self.reminder_store.due():
+    self.emit("reminder",title=reminder["title"])
+  except (OSError,ValueError) as exc:
+   self.events.status.emit("תזכורות: "+str(exc)[:120])
+ @Slot(result=str)
+ def list_reminders(self):
+  return self.encode({"items":self.reminder_store.list()})
+ @Slot(str,int,int,result=str)
+ def schedule_reminder(self,title,delay_minutes,repeat_minutes):
+  try:
+   return self.encode(self.reminder_store.add(title,delay_minutes,repeat_minutes))
+  except (ValueError,OSError) as exc:return self.encode({"error":str(exc)})
+ @Slot(str,result=str)
+ def cancel_reminder(self,identifier):
+  try:return self.encode({"cancelled":self.reminder_store.cancel(identifier)})
+  except (ValueError,OSError) as exc:return self.encode({"error":str(exc)})
  @Slot(str,bool,result=str)
  def set_tool_permission(self,name,enabled):
   from openai_agent import TOOLS
