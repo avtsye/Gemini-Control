@@ -36,6 +36,13 @@ class DesktopAgent:
             if tool == "create_zip":
                 return create_zip(self.workspace,args.get("sources"),args.get("target"),self.approval)
             return extract_zip(self.workspace,args.get("archive"),args.get("destination"),self.approval)
+        if tool=="diagnose_system":
+            if not self.approval("לאסוף אבחון טכני של התקנת התוכנה ולשתף אותו עם המודל?"):
+                return {"cancelled":True}
+            from diagnostics import inspect_environment
+            from capability_workshop import CapabilityWorkshop
+            from conversation_store import location
+            return inspect_environment(CapabilityWorkshop(),location())
         if tool in {"github_engine","github_issues","github_pull_requests"}:
             from github_cli_tools import github_engine,github_issues,github_pull_requests
             if tool=="github_engine":return github_engine()
