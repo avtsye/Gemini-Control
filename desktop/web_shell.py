@@ -338,6 +338,23 @@ class Bridge(QObject):
   threading.Thread(target=worker,daemon=True).start()
   return self.encode({"started":True})
 
+ @Slot(str,str,result=str)
+ def test_capability(self,identifier,raw_payload):
+  if self.busy:return self.encode({"error":"משימה אחרת פעילה"})
+  try:payload=json.loads(raw_payload)
+  except ValueError:return self.encode({"error":"קלט JSON אינו תקין"})
+  self.busy=True
+  self.active_task_chat=self.chat_id
+  def worker():
+   try:
+    result=self.workshop.test_capability(identifier,payload,self.approve)
+    self.events.message.emit("assistant","בדיקת הרחבה: "+json.dumps(result,ensure_ascii=False)[:2200])
+   except Exception as exc:
+    self.events.message.emit("system_note","בדיקת ההרחבה נכשלה: "+str(exc)[:400])
+   finally:self.events.finished.emit()
+  threading.Thread(target=worker,daemon=True).start()
+  return self.encode({"started":True})
+
  @Slot(str,result=str)
  def disable_capability(self,identifier):
   try:self.workshop.disable(identifier);return self.encode({"ok":True})
