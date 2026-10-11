@@ -182,6 +182,18 @@ class Bridge(QObject):
    return self.select_chat(self.chat_id)
   except (ValueError,OSError) as exc:return self.encode({"error":str(exc)})
  @Slot(result=str)
+ def restore_chats(self):
+  if self.busy:return self.encode({"error":"משימה פעילה"})
+  filename,_=QFileDialog.getOpenFileName(None,"שחזור שיחות","", "JSON (*.json)")
+  if not filename:return self.encode({"cancelled":True})
+  try:
+   file=Path(filename)
+   if not file.is_file() or file.stat().st_size>15_000_000:
+    return self.encode({"error":"קובץ גיבוי גדול מדי או חסר"})
+   backup=json.loads(file.read_text(encoding="utf-8"))
+   return self.encode(self.store.restore_history(backup))
+  except (OSError,ValueError,TypeError) as exc:return self.encode({"error":str(exc)[:250]})
+ @Slot(result=str)
  def backup_chats(self):
   try:
    filename,_=QFileDialog.getSaveFileName(None,"גיבוי שיחות","Gemini-Control-history.json","JSON (*.json)")
