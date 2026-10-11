@@ -33,6 +33,7 @@ jobs:
           python desktop/tests/test_scheduled_agent_store.py -v
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python desktop/tests/test_offline_ai_adapters.py -v
+          python desktop/tests/test_external_model_worker.py -v
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build portable Windows desktop
         shell: pwsh
