@@ -36,6 +36,16 @@ class SignInTests(unittest.TestCase):
             payload=post.call_args.kwargs["json"]
             self.assertTrue(payload["stream"])
             self.assertFalse(payload["store"])
+    def test_question_specific_image_analysis(self):
+        c=ChatGPTSignIn();c.access_token="mock"
+        with patch("openai_signin.requests.post",return_value=FakeStream()) as post:
+            answer=c.describe_image(b"valid enough for fake backend","model-a","מה מופיע בתמונה?")
+            self.assertEqual(answer,"שלום עולם")
+            payload=post.call_args.kwargs["json"]
+            content=payload["input"][0]["content"]
+            self.assertIn("מה מופיע בתמונה?",content[0]["text"])
+            self.assertEqual(content[1]["type"],"input_image")
+            self.assertFalse(payload["store"])
     def test_no_completion_is_error(self):
         c=ChatGPTSignIn();c.access_token="mock"
         with patch("openai_signin.requests.post",return_value=BadStream()):
