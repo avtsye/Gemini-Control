@@ -3,10 +3,10 @@ import json,re,uuid
 from pathlib import Path
 from datetime import datetime,timezone
 from conversation_store import location
-ALLOWED={"windows_snapshot","inspect_window","installed_apps","system_status","workspace_files","inspect_workspace_file","open_workspace_file","open_browser","create_word","project_file","screenshot","draw_paint"}
+ALLOWED={"windows_snapshot","inspect_window","installed_apps","system_status","workspace_files","inspect_workspace_file","open_workspace_file","open_browser","create_word","project_file","screenshot","draw_paint","create_pdf"}
 MAX_STEPS=6
-ARGUMENTS={"windows_snapshot":set(),"installed_apps":set(),"system_status":set(),"workspace_files":set(),"screenshot":set(),"inspect_window":{"handle"},"inspect_workspace_file":{"path"},"open_workspace_file":{"path"},"open_browser":{"url"},"create_word":{"name","content"},"project_file":{"project","path","content"},"draw_paint":{"svg"}}
-REQUIRED={"inspect_window":{"handle"},"inspect_workspace_file":{"path"},"open_workspace_file":{"path"},"open_browser":{"url"},"create_word":{"name","content"},"project_file":{"project","path","content"},"draw_paint":{"svg"}}
+ARGUMENTS={"windows_snapshot":set(),"installed_apps":set(),"system_status":set(),"workspace_files":set(),"screenshot":set(),"inspect_window":{"handle"},"inspect_workspace_file":{"path"},"open_workspace_file":{"path"},"open_browser":{"url"},"create_word":{"name","content"},"project_file":{"project","path","content"},"draw_paint":{"svg"},"create_pdf":{"name","content","direction"}}
+REQUIRED={"inspect_window":{"handle"},"inspect_workspace_file":{"path"},"open_workspace_file":{"path"},"open_browser":{"url"},"create_word":{"name","content"},"project_file":{"project","path","content"},"draw_paint":{"svg"},"create_pdf":{"name","content"}}
 
 
 class ExtensionManager:
