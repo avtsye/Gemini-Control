@@ -54,12 +54,12 @@
     status.textContent='ההנחיה הוכנסה. בדוק ושלח את ההודעה ב-Gemini.';
   };
   // Read only model response content; never follow embedded instructions without validation and click.
-  let candidate=null;
+  let candidate=null, candidateFingerprint='', consumedFingerprint='';
   function scan(){
     const nodes=[...document.querySelectorAll('model-response, .model-response-text, [data-message-author-role="model"], [data-test-id="model-response"]')];
     let text=nodes.slice(-4).map(n=>n.innerText||'').join('\n');
     const marker=text.lastIndexOf(START);
-    if(marker<0){execute.disabled=true;return}
+    if(marker<0){candidate=null;execute.disabled=true;return}
     const after=text.slice(marker+START.length);
     const a=after.indexOf('{');
     if(a<0||a>100) return;
@@ -73,7 +73,9 @@
     try {
       const o=JSON.parse(after.slice(a,end));
       if(o.version!==1||!['question','open_app','drawing_svg','draw_paint','write_file','type_text'].includes(o.type))return;
-      candidate=o;execute.disabled=false;status.textContent='נמצאה הצעת פעולה. לחץ לבדיקה לפני אישור.';
+      const fingerprint=after.slice(a,end);
+      if(fingerprint===consumedFingerprint)return;
+      candidate=o;candidateFingerprint=fingerprint;execute.disabled=false;status.textContent='נמצאה הצעת פעולה. לחץ לבדיקה לפני אישור.';
     }catch(e){}
   }
   const observer=new MutationObserver(()=>{if(!host.isConnected && document.body)document.body.append(host);scan()});
@@ -84,9 +86,10 @@
     try{
       const res=await chrome.runtime.sendMessage({type:'GEMINI_WEBSITE_ACTION',action:candidate});
       if(res?.error)throw Error(res.error);
+      consumedFingerprint=candidateFingerprint;candidate=null;
       status.textContent=res.message||'הבקשה הועברה לתוסף';
     }catch(e){status.textContent=e.message||String(e)}
-    finally{execute.disabled=false}
+    finally{execute.disabled=!candidate}
   };
 
   // When a user explicitly opts in, prepare the tool contract upon Enter.
@@ -96,7 +99,7 @@
     const editor=composer();
     if(!editor||!(editor===event.target||editor.contains(event.target)))return;
     const request=getText(editor);
-    if(!trigger.test(request)||request.includes('GEMINI_CONTROL_ACTION'))return;
+    if(!trigger.test(request)||request.includes('You can propose operations for the user'))return;
     event.preventDefault();event.stopImmediatePropagation();
     prepare.click();
     status.textContent='צורפה הנחיית התוסף. בדוק ושלח שוב ב-Enter.';
