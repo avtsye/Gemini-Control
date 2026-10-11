@@ -347,11 +347,18 @@ class Bridge(QObject):
    return self.encode({"id":identifier})
   except (OSError,ValueError) as e:return self.encode({"error":str(e)})
 
+ @Slot(str,bool,result=str)
+ def set_tool_permission(self,name,enabled):
+  from openai_agent import TOOLS
+  try:
+   return self.encode(self.agent.policy.set_allowed(name,enabled,TOOLS | {"run_capability"}))
+  except (ValueError,OSError) as exc:
+   return self.encode({"error":str(exc)})
  @Slot(result=str)
  def tools_catalog(self):
   from openai_agent import TOOLS
   from capabilities_catalog import catalog
-  return self.encode({"coverage":catalog(TOOLS),"native_tools":sorted(TOOLS),
+  return self.encode({"coverage":catalog(TOOLS),"disabled_tools":sorted(self.agent.policy.disabled()),"native_tools":sorted(TOOLS),
     "capabilities":[{"id":item.get("id"),"name":item.get("name"),
                      "status":item.get("status"),"description":item.get("description","")}
                      for item in self.workshop.list()]})
