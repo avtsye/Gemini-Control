@@ -68,3 +68,53 @@ def execute(workspace,operation,arguments,timeout=300):
     if process.returncode and "error" not in response:
         return {"error":"AI model worker failed","details":process.stderr[-400:]}
     return response
+
+OPTIONAL_PACKAGES={
+    "speech":("faster-whisper>=1.1,<2","pyttsx3>=2.90,<3"),
+    "embedding":("sentence-transformers>=3,<6",),
+    "image":("diffusers>=0.30,<1","transformers>=4.40,<5",
+             "torch>=2.5,<3","accelerate>=0.34,<2"),
+}
+
+def prepare_environment(workspace,features,approve,timeout=1200):
+    """Explicitly approved package install into a dedicated venv; never downloads models."""
+    if (not isinstance(features,list) or not features or
+        any(name not in OPTIONAL_PACKAGES for name in features)):
+        raise ValueError("Unknown optional AI feature")
+    selected=sorted(set(features))
+    root=Path(workspace).expanduser().resolve()
+    env=root/".ai-venv"
+    if env.is_symlink():raise ValueError("AI environment must not be a symlink")
+    packages=list(dict.fromkeys(pkg for name in selected for pkg in OPTIONAL_PACKAGES[name]))
+    if not callable(approve) or not approve(
+        "להתקין ספריות Python חיצוניות לסביבת AI נפרדת? התקנה זו עשויה "
+        "להוריד מאות MB או יותר ולהריץ קוד התקנה מקומי. לא יורדו מודלים. רכיבים: "+
+        ", ".join(selected)):
+        return {"cancelled":True}
+    python=shutil.which("python")
+    if not python:return {"unavailable":"Install Python and make it available on PATH"}
+    root.mkdir(parents=True,exist_ok=True)
+    if not env.exists():
+        try:
+            creation=subprocess.run([python,"-m","venv",str(env)],
+                capture_output=True,text=True,encoding="utf-8",errors="replace",
+                shell=False,timeout=120)
+        except subprocess.TimeoutExpired:
+            return {"error":"Creating Python environment timed out"}
+        if creation.returncode:
+            return {"error":"Cannot create separate Python environment",
+                    "details":creation.stderr[-300:]}
+    runtime=env/("Scripts/python.exe" if os.name=="nt" else "bin/python")
+    if not runtime.is_file():return {"error":"Python environment is incomplete"}
+    try:
+        installation=subprocess.run([str(runtime),"-m","pip","--isolated","install",
+            "--disable-pip-version-check","--no-input","--only-binary=:all:",*packages],
+            capture_output=True,text=True,encoding="utf-8",errors="replace",
+            timeout=max(60,min(int(timeout),1800)),shell=False)
+    except subprocess.TimeoutExpired:
+        return {"error":"Optional AI package installation timed out"}
+    if installation.returncode:
+        return {"error":"Optional AI package installation failed",
+                "details":installation.stderr[-350:]}
+    return {"installed":selected,"modules":check_modules(workspace).get("modules",{}),
+            "models_downloaded":False}
