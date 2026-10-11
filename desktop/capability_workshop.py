@@ -145,7 +145,7 @@ class CapabilityWorkshop:
         cmd=[str(python),"-m","pip","--isolated","install","--disable-pip-version-check",
              "--no-input","--only-binary=:all:","--"]+packages
         try:
-            outcome=subprocess.run(cmd,capture_output=True,text=True,timeout=timeout,
+            outcome=subprocess.run(cmd,capture_output=True,text=True,encoding="utf-8",errors="replace",timeout=timeout,
                                    cwd=str(folder),shell=False)
         except subprocess.TimeoutExpired:
             return {"error":"Package installation timed out"}
@@ -228,7 +228,7 @@ class CapabilityWorkshop:
             return {"passed":passed,"details":details,"isolated":True}
         try:
             process=subprocess.run([interpreter,str(runner),str(folder/"main.py"),str(output)],
-                input=json.dumps(payload,ensure_ascii=True),text=True,encoding="utf-8",capture_output=True,
+                input=json.dumps(payload,ensure_ascii=True),text=True,encoding="utf-8",errors="replace",capture_output=True,
                 cwd=str(folder),timeout=min(max(timeout,1),30),shell=False)
             passed=process.returncode==0
             details=(process.stdout if passed else process.stderr)[-1500:]
@@ -284,7 +284,7 @@ class CapabilityWorkshop:
             from container_capabilities import run_plugin
             return run_plugin(folder/"main.py",output_dir,payload,timeout)
         result=subprocess.run([interpreter,str(runner),str(folder/"main.py"),str(output_dir)],
-            input=json.dumps(payload,ensure_ascii=True),capture_output=True,text=True,encoding="utf-8",
+            input=json.dumps(payload,ensure_ascii=True),capture_output=True,text=True,encoding="utf-8",errors="replace",
             timeout=timeout,cwd=str(folder),shell=False)
         if result.returncode:
             return {"error":"Extension failed","details":result.stderr[-1200:]}
