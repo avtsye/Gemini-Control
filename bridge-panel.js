@@ -27,9 +27,9 @@ $('review').onclick=()=>chrome.tabs.create({url:chrome.runtime.getURL('action-re
 pending();
 setInterval(pending,3000);
 
-let controls=[];
+let controls=[],targetWindow=null;
 $('inspect').onclick=async()=>{
- try{const result=await send('inspect_controls');controls=result.controls||[];const select=$('control');select.replaceChildren();
+ try{const result=await send('inspect_controls');targetWindow=result.inspection?.handle||null;controls=result.inspection?.controls||[];const select=$('control');select.replaceChildren();
  controls.forEach((c,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=c.role+' · '+c.label;select.append(o)});
  $('uiResult').textContent=controls.length+' רכיבים זמינים בחלון הפעיל';
  }catch(e){$('uiResult').textContent='שגיאה: '+e.message}
@@ -37,6 +37,6 @@ $('inspect').onclick=async()=>{
 $('clickControl').onclick=async()=>{
  const c=controls[Number($('control').value)];if(!c)return;
  if(!confirm('ללחוץ על "'+c.label+'" בתוכנה הפעילה?'))return;
- try{const r=await send('click_control',{index:c.index,label:c.label});$('uiResult').textContent=r.message;controls=[];$('control').replaceChildren()}
+ try{const r=await send('click_control',{handle:targetWindow,index:c.index,label:c.label});$('uiResult').textContent=r.message;controls=[];targetWindow=null;$('control').replaceChildren()}
  catch(e){$('uiResult').textContent=e.message}
 };
