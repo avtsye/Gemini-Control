@@ -46,7 +46,7 @@ function notify(message,kind='info'){
  $('toastArea').append(item);
  window.setTimeout(()=>item.remove(),7000);
 }
-const ALLOWED_DROPPED_EXT=/\\.(txt|md|json|csv|py|js|html|css)$/i;
+const ALLOWED_DROPPED_EXT=/\.(txt|md|json|csv|py|js|html|css)$/i;
 const composer=document.querySelector('.composer');
 composer.addEventListener('dragover',event=>{event.preventDefault();composer.classList.add('drop-target')});
 composer.addEventListener('dragleave',()=>composer.classList.remove('drop-target'));
@@ -55,7 +55,7 @@ composer.addEventListener('drop',async event=>{
  const files=Array.from(event.dataTransfer?.files||[]).slice(0,12);
  for(const file of files){
   try{
-   if(/\\.(png|jpg|jpeg)$/i.test(file.name)&&file.size<=5000000){
+   if(/\.(png|jpg|jpeg)$/i.test(file.name)&&file.size<=5000000){
     const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(Error('טעינת קובץ נכשלה'));reader.readAsDataURL(file)});
     const base64=data.slice(data.indexOf(',')+1);
     const result=await call('attach_image_base64',file.name,base64);
