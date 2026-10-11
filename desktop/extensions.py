@@ -5,6 +5,9 @@ from datetime import datetime,timezone
 from conversation_store import location
 ALLOWED={"windows_snapshot","inspect_window","installed_apps","system_status","workspace_files","inspect_workspace_file","open_workspace_file","open_browser","create_word","project_file","screenshot","draw_paint"}
 MAX_STEPS=6
+ARGUMENTS={"windows_snapshot":set(),"installed_apps":set(),"system_status":set(),"workspace_files":set(),"screenshot":set(),"inspect_window":{"handle"},"inspect_workspace_file":{"path"},"open_workspace_file":{"path"},"open_browser":{"url"},"create_word":{"name","content"},"project_file":{"project","path","content"},"draw_paint":{"svg"}}
+REQUIRED={"inspect_window":{"handle"},"inspect_workspace_file":{"path"},"open_workspace_file":{"path"},"open_browser":{"url"},"create_word":{"name","content"},"project_file":{"project","path","content"},"draw_paint":{"svg"}}
+
 
 class ExtensionManager:
  def __init__(self,root=None):
@@ -18,6 +21,8 @@ class ExtensionManager:
   for step in steps:
    if not isinstance(step,dict) or step.get("tool") not in ALLOWED or not isinstance(step.get("arguments",{}),dict):
     raise ValueError("Unsupported extension tool")
+   if set(step.get("arguments",{}))-ARGUMENTS[step["tool"]] or not REQUIRED.get(step["tool"],set()).issubset(step.get("arguments",{})):
+    raise ValueError("Invalid arguments for "+step["tool"])
    if len(json.dumps(step,ensure_ascii=False))>40000:raise ValueError("Step too large")
   return {"name":name,"description":str(manifest.get("description",""))[:500],
           "steps":[{"tool":s["tool"],"arguments":s.get("arguments",{})} for s in steps]}
