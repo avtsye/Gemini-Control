@@ -32,6 +32,11 @@ class UIContract(unittest.TestCase):
   methods=set(re.findall(r"call\('([a-z_]+)'",self.html))
   decorators=set(re.findall(r"@Slot\([^\n]*?result=str\)\s+def ([a-z_]+)\(",self.shell))
   self.assertFalse(methods-decorators,"Undeclared Qt bridge methods: "+str(methods-decorators))
+ def test_reminder_timer_and_bridge(self):
+  self.assertIn("self.reminder_timer.timeout.connect(self._poll_reminders)",self.shell)
+  self.assertIn("def _poll_reminders(self):",self.shell)
+  for name in ("list_reminders","schedule_reminder","cancel_reminder"):
+   self.assertIn("def "+name+"(",self.shell)
  def test_qt_slots_not_shadowed_by_attributes(self):
   self.assertNotIn("self.extensions=ExtensionManager()",self.shell)
   self.assertIn("self.extension_manager=ExtensionManager()",self.shell)
