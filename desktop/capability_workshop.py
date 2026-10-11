@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import hashlib
+import zipfile
 import importlib.util
 import shutil
 import venv
@@ -176,6 +177,46 @@ class CapabilityWorkshop:
             except (ValueError,OSError):continue
         return out
 
+    def export_package(self,identifier,target):
+        folder=self._path(identifier)
+        path=Path(target)
+        if path.suffix.lower()!=".zip" or path.exists() or path.is_symlink():
+            raise ValueError("Select a new .zip export path")
+        meta=self._manifest(folder)
+        manifest={"name":meta.get("name"),"description":meta.get("description",""),
+                  "package_version":1}
+        with zipfile.ZipFile(path,"x",compression=zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("manifest.json",json.dumps(manifest,ensure_ascii=False))
+            archive.writestr("main.py",self.source(identifier))
+        return {"exported":str(path)}
+    def import_package(self,source):
+        path=Path(source)
+        if not path.is_file() or path.stat().st_size>2_000_000:
+            raise ValueError("Invalid plugin archive")
+        with zipfile.ZipFile(path) as archive:
+            entries={item.filename:item for item in archive.infolist()}
+            if set(entries)!={"manifest.json","main.py"}:
+                raise ValueError("Package may contain only manifest.json and main.py")
+            if entries["main.py"].file_size>MAX_SOURCE or entries["manifest.json"].file_size>10000:
+                raise ValueError("Package exceeds size limits")
+            meta=json.loads(archive.read("manifest.json").decode("utf-8"))
+            code=archive.read("main.py").decode("utf-8")
+        if not isinstance(meta,dict) or meta.get("package_version")!=1:
+            raise ValueError("Unsupported package manifest")
+        identifier=self.draft(meta.get("name"),meta.get("description",""),code)
+        folder=self._path(identifier)
+        manifest=self._manifest(folder)
+        manifest["require_test"]=True
+        manifest["origin"]="imported"
+        self._write_manifest(folder,manifest)
+        return {"id":identifier,"status":"draft"}
+    def remove(self,identifier,approved=False):
+        if not approved:raise PermissionError("Explicit removal approval required")
+        folder=self._path(identifier)
+        if self._manifest(folder).get("status")=="enabled":
+            raise PermissionError("Disable the plugin before removing it")
+        shutil.rmtree(folder)
+        return {"removed":identifier}
     def source(self,identifier):
         folder=self._path(identifier)
         return (folder/"main.py").read_text(encoding="utf-8")
