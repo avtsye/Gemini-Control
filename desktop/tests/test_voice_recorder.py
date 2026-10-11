@@ -28,11 +28,24 @@ class VoiceRecorderTests(unittest.TestCase):
    with wave.open(str(path),"rb") as source:
     self.assertEqual(source.getframerate(),16000)
     self.assertEqual(source.getnchannels(),1)
+ def test_audio_metadata_matches_supported_format(self):
+  with tempfile.TemporaryDirectory() as root:
+   recorder=VoiceRecorder(root)
+   recorder.sample_rate=48000
+   recorder.channels=2
+   recorder.audio=Audio()
+   recorder.device=Device(b"\x00\x00"*192)
+   recorder.recording=True
+   result=recorder.stop()
+   with wave.open(str(pathlib.Path(root)/result["recorded_file"]),"rb") as wav:
+    self.assertEqual(wav.getframerate(),48000)
+    self.assertEqual(wav.getnchannels(),2)
+
    self.assertFalse(recorder.recording)
  def test_auto_stop_does_not_recurse_and_result_remains_available(self):
   with tempfile.TemporaryDirectory() as root:
    recorder=VoiceRecorder(root)
-   recorder.MAX_BYTES=8
+   recorder.MAX_SECONDS=0.0001
    recorder.audio=Audio()
    recorder.device=Device(b"\x00"*10)
    recorder.recording=True
