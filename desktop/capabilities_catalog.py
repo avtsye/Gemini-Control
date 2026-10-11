@@ -27,7 +27,7 @@ CAPABILITIES = [
  ("project_generation","יצירת פרויקטים","partial",["project_file"]),
  ("code_repair","תיקון קוד","partial",["project_file","inspect_python_project"]),
  ("test_build","בדיקות וקימפול","partial",["inspect_python_project","run_python_tests"]),
- ("github","ניהול GitHub","missing",[]),
+ ("github","ניהול GitHub","partial",["github_engine","github_issues","github_pull_requests"]),
  ("exe_builder","יצירת EXE","missing",[]),
  ("long_memory","זיכרון ארוך טווח","partial",[]),
  ("scheduling","תזמון","missing",[]),
