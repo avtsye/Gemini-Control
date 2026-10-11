@@ -37,6 +37,16 @@ class UIContract(unittest.TestCase):
   self.assertNotIn("confirm(",self.html)
   self.assertIn("id=\"toastArea\"",self.html)
   self.assertIn("id=\"confirmDialog\"",self.html)
+ def test_native_permission_dialog_replaced(self):
+  self.assertNotIn("QMessageBox.question",self.shell)
+  self.assertIn('self.emit("approval",description=description)',self.shell)
+  self.assertIn("def approval_reply(self,allowed):",self.shell)
+  self.assertIn("msg.type==='approval'",self.html)
+ def test_extension_draft_flow(self):
+  self.assertIn("def build_extension(self,identifier,model):",self.shell)
+  self.assertIn("self.extension_manager.validate(obj)",self.shell)
+  self.assertIn("msg.type==='extension_draft'",self.html)
+  self.assertIn("התקן הרחבה מושבתת",self.html)
  def test_qt_bridge_signal_name(self):
   self.assertIn('registerObject("api",self.bridge)',self.shell)
   self.assertIn("bridge.event.connect(",self.html)
