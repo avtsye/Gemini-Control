@@ -4,15 +4,22 @@ The model directory is local to the workspace, and no download fallback exists.
 Images are written only to fresh PNG files after explicit approval.
 """
 import importlib.util
+import sys
 from pathlib import Path
 from workspace_data import safe_path
 
 def image_model_status(workspace,model_folder):
     path=safe_path(workspace,model_folder)
+    from model_runtime import has_external_env,check_modules
+    if getattr(sys,"frozen",False) or has_external_env(workspace):
+        modules=check_modules(workspace).get("modules",{})
+        diffusion=modules.get("diffusers",False)
+        torch=modules.get("torch",False)
+    else:
+        diffusion=importlib.util.find_spec("diffusers") is not None
+        torch=importlib.util.find_spec("torch") is not None
     return {"model_ready":path.is_dir() and (path/"model_index.json").is_file(),
-            "diffusers_installed":importlib.util.find_spec("diffusers") is not None,
-            "torch_installed":importlib.util.find_spec("torch") is not None,
-            "offline_only":True}
+            "diffusers_installed":diffusion,"torch_installed":torch,"offline_only":True}
 
 def generate_local_image(workspace,prompt,model_folder,target,approve,steps=20):
     if not isinstance(prompt,str) or not 3<=len(prompt)<=1500:
@@ -30,6 +37,11 @@ def generate_local_image(workspace,prompt,model_folder,target,approve,steps=20):
         return {"unavailable":"Install Diffusers and Torch explicitly to use local image generation"}
     if not approve("ליצור תמונה בעזרת מודל מקומי? התהליך עשוי לצרוך משאבי מחשב רבים."):
         return {"cancelled":True}
+    from model_runtime import has_external_env,execute
+    if getattr(sys,"frozen",False) or has_external_env(workspace):
+        result=execute(workspace,"image",{"model":str(model),"target":str(dst),
+                      "prompt":prompt,"steps":steps},timeout=600)
+        return result
     from diffusers import DiffusionPipeline
     # Model must be entirely local; pipeline does not contact the internet.
     pipeline=DiffusionPipeline.from_pretrained(str(model),local_files_only=True)
