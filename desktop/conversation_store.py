@@ -81,6 +81,48 @@ class ConversationStore:
             messages=db.execute("SELECT conversation_id,role,content,created FROM messages ORDER BY id").fetchall()
             flags=self.chats_detailed()
         return {"version":1,"conversations":conversations,"messages":messages,"flags":flags}
+    def restore_history(self,backup):
+        if not isinstance(backup,dict) or backup.get("version")!=1:
+            raise ValueError("Unsupported backup")
+        conversations=backup.get("conversations")
+        messages=backup.get("messages")
+        flags=backup.get("flags",[])
+        if (not isinstance(conversations,list) or not isinstance(messages,list)
+            or not isinstance(flags,list) or len(conversations)>500
+            or len(messages)>25000 or len(flags)>500):
+            raise ValueError("Invalid backup size")
+        mappings={}
+        timestamp=datetime.now(timezone.utc).isoformat()
+        with self._db() as db:
+            for row in conversations:
+                if not isinstance(row,(list,tuple)) or len(row)!=4:
+                    raise ValueError("Invalid conversation record")
+                old,title,*_=row
+                if not isinstance(old,str) or not isinstance(title,str) or len(title)>120:
+                    raise ValueError("Invalid title")
+                if old in mappings:raise ValueError("Duplicate conversation")
+                identifier=str(uuid.uuid4())
+                mappings[old]=identifier
+                db.execute("INSERT INTO conversations VALUES(?,?,?,?)",
+                           (identifier,title,timestamp,timestamp))
+            for row in messages:
+                if not isinstance(row,(list,tuple)) or len(row)!=4:
+                    raise ValueError("Invalid message record")
+                old,role,content,*_=row
+                if old not in mappings or role not in ("user","assistant","system_note"):
+                    raise ValueError("Invalid message owner/role")
+                if not isinstance(content,str) or len(content)>200000:
+                    raise ValueError("Invalid message content")
+                db.execute("INSERT INTO messages(conversation_id,role,content,created) VALUES(?,?,?,?)",
+                           (mappings[old],role,content,timestamp))
+            for row in flags:
+                if not isinstance(row,(list,tuple)) or len(row)!=5:raise ValueError("Invalid flags")
+                old,title,pin,arc,project=row
+                if old not in mappings or not isinstance(project,str) or len(project)>80:
+                    continue
+                db.execute("INSERT INTO conversation_flags VALUES(?,?,?,?)",
+                           (mappings[old],int(bool(pin)),int(bool(arc)),project))
+        return {"restored_chats":len(mappings),"restored_messages":len(messages)}
     def messages(self,chat_id):
         with self._db() as db:
             return db.execute("SELECT role,content FROM messages WHERE conversation_id=? ORDER BY id",(chat_id,)).fetchall()
