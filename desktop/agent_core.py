@@ -36,6 +36,11 @@ class DesktopAgent:
             if tool == "create_zip":
                 return create_zip(self.workspace,args.get("sources"),args.get("target"),self.approval)
             return extract_zip(self.workspace,args.get("archive"),args.get("destination"),self.approval)
+        if tool in {"github_engine","github_issues","github_pull_requests"}:
+            from github_cli_tools import github_engine,github_issues,github_pull_requests
+            if tool=="github_engine":return github_engine()
+            if tool=="github_issues":return github_issues(args.get("repository"),self.approval)
+            return github_pull_requests(args.get("repository"),self.approval)
         if tool in {"git_engine","git_status","git_diff","git_commit"}:
             from git_tools import git_engine,git_status,git_diff,git_commit
             if tool=="git_engine":return git_engine()
