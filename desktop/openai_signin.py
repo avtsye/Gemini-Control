@@ -6,6 +6,8 @@ import base64, hashlib, json, secrets, threading, uuid, webbrowser, os
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlencode, urlparse, parse_qs
 from pathlib import Path
+import truststore
+truststore.inject_into_ssl()  # Honor the Windows trust store, including trusted filter root CAs.
 import requests
 import jwt
 from jwt import PyJWKClient
@@ -149,6 +151,7 @@ class ChatGPTSignIn:
             if not r.ok:
                 raise SignInError("Responses error HTTP "+str(r.status_code)+": "+r.text[:350])
             for line in r.iter_lines(decode_unicode=True):
+                if isinstance(line,bytes):line=line.decode('utf-8','replace')
                 if not line or not line.startswith("data: "):continue
                 try: event=json.loads(line[6:])
                 except ValueError:continue
