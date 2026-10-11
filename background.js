@@ -89,13 +89,24 @@ chrome.runtime.onMessage.addListener((message,sender,sendResponse)=>{
  (async()=>{
   if(!sender.tab?.url?.startsWith('https://gemini.google.com/'))throw Error('מקור לא מורשה');
   const a=message.action;
-  if(!a||a.version!==1||!['question','open_app','drawing_svg'].includes(a.type))throw Error('פורמט לא נתמך');
+  if(!a||a.version!==1||!['question','open_app','drawing_svg','draw_paint'].includes(a.type))throw Error('פורמט לא נתמך');
   const result={version:1,type:a.type,description:String(a.description||'').slice(0,400)};
   if(a.type==='open_app'){
    if(!['notepad','calculator','explorer','paint'].includes(a.app))throw Error('תוכנה לא מורשית');
    result.app=a.app;
   }
   if(a.type==='question')result.question=String(a.question||'איזו תוכנה תרצה להשתמש?').slice(0,500);
+  if(a.type==='draw_paint'){
+   if(!Array.isArray(a.shapes)||a.shapes.length<1||a.shapes.length>80)throw Error('רשימת צורות לא תקינה');
+   const allowed=['rect','ellipse','line','triangle'];
+   result.shapes=a.shapes.map(x=>{
+    if(!x||!allowed.includes(x.kind))throw Error('צורה לא נתמכת');
+    const entry={kind:x.kind};
+    for(const k of ['x','y','w','h','x2','y2','width'])if(x[k]!==undefined){if(!Number.isFinite(x[k])||x[k]<-2000||x[k]>4000)throw Error('קואורדינטה לא תקינה');entry[k]=Math.round(x[k])}
+    if(x.fill!==undefined){if(typeof x.fill!=='string'||!/^#[a-fA-F0-9]{6}$/.test(x.fill))throw Error('צבע לא תקין');entry.fill=x.fill}
+    return entry;
+   });
+  }
   if(a.type==='drawing_svg'){
    if(typeof a.svg!=='string'||a.svg.length>25000||!a.svg.trim().startsWith('<svg'))throw Error('ציור לא תקין');
    result.svg=a.svg;
