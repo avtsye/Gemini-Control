@@ -2,7 +2,7 @@
 import json,sys,threading
 from pathlib import Path
 from PySide6.QtCore import QObject,Signal,Slot,QUrl,Qt
-from PySide6.QtWidgets import QApplication,QMainWindow,QMessageBox
+from PySide6.QtWidgets import QApplication,QMainWindow
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebChannel import QWebChannel
 from openai_signin import ChatGPTSignIn
@@ -63,13 +63,16 @@ class Bridge(QObject):
   self.emit("finished")
  def approve(self,description):
   self._wait.clear()
+  self._allowed=False
   self.events.approval.emit(description)
   return self._wait.wait(timeout=180) and self._allowed
  def ask_permission(self,description):
-  self._allowed=QMessageBox.question(None,"אישור פעילות במחשב",description,
-    QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.No,
-    QMessageBox.StandardButton.No)==QMessageBox.StandardButton.Yes
+  self.emit("approval",description=description)
+ @Slot(bool,result=str)
+ def approval_reply(self,allowed):
+  self._allowed=bool(allowed)
   self._wait.set()
+  return self.encode({"ok":True})
  def propose(self,description,steps):
   return self.store.propose(self.chat_id,description,steps)
  @Slot(result=str)
