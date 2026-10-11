@@ -15,6 +15,8 @@ jobs:
           for file in background.js popup.js workspace.js gemini-protocol.js action-review.js bridge-panel.js agent.js agent-planner.js; do
             node --check "$file"
           done
+      - name: UX and integration contract regression
+        run: python3 tests/ux_contract_check.py
       - name: Validate extension manifest and static assets
         run: |
           python3 - <<'PY'
