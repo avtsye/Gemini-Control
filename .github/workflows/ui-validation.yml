@@ -1,0 +1,36 @@
+name: Desktop UI Validation
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'desktop/chat_ui.html'
+      - 'desktop/web_shell.py'
+      - 'desktop/conversation_store.py'
+      - 'desktop/tests/test_conversation_enhancements.py'
+      - '.github/workflows/ui-validation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Extract inline user interface script
+        shell: pwsh
+        run: |
+          @'
+          from pathlib import Path
+          source=Path("desktop/chat_ui.html").read_text(encoding="utf-8")
+          js=source.rsplit("<script>",1)[1].split("</script>",1)[0]
+          Path("desktop/chat_ui_check.js").write_text(js,encoding="utf-8")
+          '@ | python -
+      - name: Check JavaScript parser
+        run: node --check desktop/chat_ui_check.js
+      - name: Verify conversation data enhancements
+        run: python desktop/tests/test_conversation_enhancements.py -v
+      - name: Verify existing conversation behavior
+        run: python desktop/tests/test_conversations.py -v
