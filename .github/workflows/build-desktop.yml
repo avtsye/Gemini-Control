@@ -18,7 +18,7 @@ jobs:
       - name: Check desktop Python syntax and unittest
         shell: pwsh
         run: |
-          python -m pip install requests
+          python -m pip install requests 'PyJWT[crypto]'
           python -m compileall -q desktop
           node --check desktop/website_bridge.js
           python desktop/tests/test_agent.py -v
@@ -35,7 +35,7 @@ jobs:
       - name: Package application
         shell: pwsh
         run: |
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --name GeminiControlDesktop --add-data "desktop/website_bridge.js;." desktop/app_web.py --paths desktop
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name GeminiControlDesktop --add-data "desktop/website_bridge.js;." desktop/app_openai.py --paths desktop
           if (!(Test-Path dist/GeminiControlDesktop.exe)) { throw 'EXE missing' }
       - uses: actions/upload-artifact@v4
         with:
