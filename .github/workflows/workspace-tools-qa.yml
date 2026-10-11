@@ -1,0 +1,29 @@
+name: Workspace Tools QA
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'desktop/workspace_archives.py'
+      - 'desktop/agent_core.py'
+      - 'desktop/openai_agent.py'
+      - 'desktop/tests/test_workspace_archives.py'
+      - '.github/workflows/workspace-tools-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile Python sources
+        run: python -m compileall -q desktop
+      - name: Test workspace ZIP and compare functions
+        run: python desktop/tests/test_workspace_archives.py -v
