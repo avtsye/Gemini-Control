@@ -86,6 +86,8 @@ class UIContract(unittest.TestCase):
   self.assertRegex(self.html,r"#modalBody\\{[^}]*overflow-y:auto")
   self.assertRegex(self.html,r"\\.compose-actions\\{[^}]*flex-wrap:wrap")
   self.assertRegex(self.html,r"@media\\(max-width:720px\\)")
+  self.assertIn('<details class="nav-details">',self.html)
+  self.assertIn('<summary>ניהול ותוספים</summary>',self.html)
  def test_inline_javascript_syntax(self):
   executable=shutil.which("node")
   if not executable:self.skipTest("Node.js is not installed")
