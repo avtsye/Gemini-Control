@@ -1,49 +1,74 @@
-# Agent capability roadmap (incremental, compatibility-first)
+# Gemini-Control — מצב יכולות ותוכנית השלמה
 
-This document tracks the requested expansion of Gemini-Control. It distinguishes implemented features from planned integration. Keep the existing ChatGPT sign-in, HTML UI, history database and approval model compatible.
+עודכן לאחר הרחבת ממשק המשתמש, כלי העבודה ומערכת התוספים. **אין לפרש נוכחות של כלי בתפריט כהוכחה שהמנוע או התלות הדרושים מותקנים ושכל הבדיקות הצליחו.**
 
-## Wave 1 — low-risk local tools (implemented on feature branch)
-- Workspace ZIP creation, extraction with traversal and overwrite rejection, and textual file diffs.
-- Expose these operations through the existing DesktopAgent and agent tool schema.
-- Add regression tests for successful behavior and rejection paths.
-- Not yet: 7z, unrestricted filesystem access, automatic process installation or remote browser execution.
+## 1. שיחות, ממשק ותוצרים
 
-## Wave 2 — tool registry and reliable tasks
-- Central typed tool registry: name, JSON input schema, capability discovery, risk tier and execution adapter.
-- Structured agent plans and task state persisted to SQLite; resumable steps and explicit cancellation.
-- Structured step-by-step activity reporting; user confirmation on system-modifying actions.
-- Integrate enabled reviewed capabilities as discoverable callable tools with version pinning and rollback.
-- No unreviewed generated Python running directly with user OS privileges.
+| תחום | מצב |
+|---|---|
+| בחירת כמה קבצים, גרירת טקסט ותמונות | ממומש לקבצים נתמכים, עם מגבלות גודל |
+| תצוגות מקדימות | ממומש לטקסט, תמונות בגרירה ו־HTML; PDF/Office טרם בתצוגה חיה מלאה |
+| עריכת הודעה ושליחה מחדש | ממומש |
+| גרסה נוספת לתשובה | ממומש; ללא עץ גרסאות וענפים |
+| חיפוש בשיחות, נעיצה, ארכיון, פרויקטים | ממומש בתשתית SQLite |
+| גיבוי ושחזור | ממומש ב־JSON |
+| Markdown, קוד וטבלאות | מימוש בטוח ובסיסי; לא כל תחביר Markdown |
+| תצוגת תוצרים חיה | תצוגת HTML מוגבלת ב־iframe מבודד |
+| קיצורי מקלדת, מראה כהה/בהיר וגודל גופן | ממומש |
+| השוואת שני מודלים | ממומש; ההשוואה טקסטואלית |
+| רמת חשיבה מותאמת | עדיין לא מומש בקריאת המודל |
 
-## Wave 3 — safe plugin development
-- Generate capability source and test suite; install dependencies in isolated per-capability virtual environments.
-- Verify dependency inventory and consent; lockfile and reversible installs.
-- Use a real OS security boundary (separate low-privilege account/sandbox) before auto-running generated code.
-- Smoke tests, version snapshots, disable/update/rollback and visible execution logs.
+## 2. בינה מלאכותית וידע
 
-## Wave 4 — documents and media
-- DOCX/PPTX/XLSX generation/editing, Arabic/Hebrew RTL where supported, scanned PDF OCR (including Hebrew language packs), local indexing.
-- File conversion via explicit adapters, 7z with validated provider installation and bounded extraction.
-- Audio transcription and TTS adapters; images and MP4 editing with locally available engines and clear optional dependencies.
-- Detect missing libraries and report unavailable engines truthfully.
+| תחום | מצב |
+|---|---|
+| קריאת דף HTTPS באישור | ממומש; ללא מנוע אינדקס חיפוש כללי |
+| מחקר עומק עם מקורות | חסר כמסלול מקיף |
+| ניתוח תמונות מצורפות | ממומש במסלול ניתוח חזותי של המודל; תלוי בתמיכת המודל |
+| צילום מסך למודל | ממומש באישור נפרד |
+| יצירת/עריכת תמונות ב־AI | חסר |
+| תמלול מקומי וקול סינתטי | מתאמים אופציונליים; אין עדיין צ'אט קולי חי |
+| Excel/PowerPoint/Word/PDF | כלים מובנים בחלק מהתרחישים |
+| ניתוח נתונים ותרשימי SVG | חלקי |
+| זיכרון פרויקט עריך | ממומש ונשלח כהקשר בשיחות המשויכות לפרויקט |
+| בסיס ידע מקומי | SQLite FTS5; עדיין אינו מנוע embeddings סמנטי |
+| הקשר ארוך בין שיחות | חלקי; בלי מנגנון דחיסה/סיכום מושלם |
 
-## Wave 5 — computer / browser automation
-- Add observation-to-action feedback loop with permissioned screenshots and UI Automation fallback.
-- Structured browser connector with URL/host and download boundaries, form review before submission.
-- Windows package-management adapters with preview, elevation awareness and explicit user approval.
-- PowerShell: reviewed scripts, subprocess output, allowlisted workspace scope, and safeguards against destructive commands.
+## 3. סוכן, הרשאות ופיתוח
 
-## Wave 6 — development, memory, scheduling
-- GitHub connector with explicit repository access scopes, code checks, branches, PR review.
-- Project scaffolding, test runner, build recipes and Windows EXE packaging.
-- Searchable local memory, user-controlled deletion/export, scheduled tasks and bounded sub-agents.
-- Privacy-first semantic search with local embedding provider if available.
+| תחום | מצב |
+|---|---|
+| כלים למחשב, חלונות ותיקיית העבודה | קיימים ומחייבים אישורים מתאימים |
+| יומן פעילות מפורט | ממומש |
+| עצירת סוכן והמשך בין צעדים | חלקי; אין resume מלא של פעולה ארוכה שנקטעה |
+| משימות מרובות צעדים ושמירת יומן | חלקי |
+| פעולות מקבילות עם בקרה | חסר |
+| בדיקת הצלחה לפני/אחרי צילום מסך | חלקי |
+| תזכורות חוזרות | מקומיות, רק כשהאפליקציה פתוחה |
+| Git מקומי | מצב, הבדלים ו־commit באישור, בלי push |
+| GitHub CLI | קריאת Issues/PR באמצעות התקנה והתחברות קיימות |
+| בדיקות פרויקטי Python | תחביר ו־unittest באישור |
+| בניית EXE מתוך שיחה | חסר |
+| התקנת רכיבים חסרים | נתמכת חלקית בתוך סביבת תוסף; אין מנהל חבילות Windows מלא |
+| אבחון סביבת עבודה | דוח תלויות, מנועים, תוספים ומסד נתונים |
+| הרשאות לכל כלי | חסימה מקומית מתמשכת; אינה מבטלת אישור להרצה |
 
-## Release gates for each wave
-1. Static checks and focused unit tests pass.
-2. Existing tests for sign-in, conversations, plugins, tools and UI pass.
-3. Security review covers path traversal, consent, secret leakage and cancellation.
-4. Windows 11 interactive smoke tests and manual review of irreversible actions.
-5. Merge only after approval; all changes made on isolated feature branches.
+## 4. מערכת תוספים עצמאית
 
-**Current reality:** wave 1 changes have been committed, but no Windows interactive acceptance testing or CI execution has been verified yet. All other waves are planning, not complete.
+- סדנת קוד Python ותוספים המופעלים מתוך הצ'אט: **ממומש**, עם טיוטה, סקירה ואישור.
+- קטלוג מקומי: **שישה תוספים מובנים** ל־WAV, GIF, HTML, CSV, JSON ו־SVG; לא חנות רשת חיצונית.
+- בדיקות ניסיון, תיקון בעזרת המודל, רשימת יכולות דינמית, גרסאות ו־rollback: **ממומש חלקית**; אין הוכחה שכל בקשה תתוקן אוטומטית.
+- תלויות Python וסביבה נפרדת: **חלקי**; התקנת חבילות דורשת אישור, ומערכת ה־venv אינה בידוד אבטחתי.
+- Docker: **מסלול אופציונלי** שמותנה בהתקנה ובתמונת Python מקומית. אינו מיועד להבטיח אבטחה מוחלטת.
+- ייצוא/ייבוא ZIP, שיתוף והסרה: **ממומש**, חבילה מיובאת נרשמת כטיוטה מושבתת.
+
+## דרישות לפני הכרזה על גרסה יציבה
+
+1. בדיקות syntax ו־UI bridge מצליחות ב־GitHub Actions.
+2. בדיקות Windows/Linux לכלים, SQLite, הרחבות והרשאות מצליחות.
+3. בדיקות אינטגרציה מאמתות יצירה והפעלה של תוסף Python אמיתי.
+4. בדיקת UX אינטראקטיבית על Windows 11 עם כניסה חיה לחשבון ותלויות אופציונליות.
+5. בדיקת פרטיות, הרשאות, גיבוי ותהליכים לאחר כשל.
+6. רק לאחר מכן בניית EXE ידנית ופרסום מהדורה.
+
+**מצב אמיתי:** היכולות לעיל יושמו ברמות שונות; לא כל תכונות מערכות הבינה המלאכותית הקלאסיות קיימות עדיין. בפרט, אין מערכת אוטונומית מלאה להתקנת כל יכולת חדשה ללא בדיקת משתמש.
