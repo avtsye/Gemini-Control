@@ -30,6 +30,8 @@ class Bridge(QObject):
   self.extension_manager=ExtensionManager()
   self.workshop=CapabilityWorkshop()
   self.reminder_store=ReminderStore()
+  from scheduled_agent_store import ScheduledAgentStore
+  self.scheduled_agents=ScheduledAgentStore()
   self.reminder_timer=QTimer(self)
   self.reminder_timer.timeout.connect(self._poll_reminders)
   self.reminder_timer.start(30000)
@@ -523,8 +525,40 @@ class Bridge(QObject):
   try:
    for reminder in self.reminder_store.due():
     self.emit("reminder",title=reminder["title"])
+   if not self.busy and self.auth.access_token:
+    for task in self.scheduled_agents.due():
+     if task["model"] not in {slug for slug,_ in self.available_models}:
+      self.events.status.emit("מודל המשימה המתוזמנת אינו זמין")
+      continue
+     self.busy=True
+     self.active_task_chat=self.chat_id
+     def worker(task=task):
+      try:
+       if not self.approve("להפעיל כעת משימת סוכן מתוזמנת? "+task["prompt"][:280]):
+        self.events.message.emit("system_note","המשימה המתוזמנת בוטלה מפני שלא ניתן אישור")
+        return
+       self.events.activity.emit("מריץ משימה מתוזמנת: "+task["prompt"][:120])
+       self.agent.run(task["prompt"],task["model"],
+         lambda msg:self.events.message.emit("assistant",str(msg)[:12000]))
+      except Exception as exc:
+       self.events.message.emit("system_note","משימה מתוזמנת נכשלה: "+str(exc)[:320])
+      finally:self.events.finished.emit()
+     threading.Thread(target=worker,daemon=True).start()
   except (OSError,ValueError) as exc:
    self.events.status.emit("תזכורות: "+str(exc)[:120])
+ @Slot(result=str)
+ def list_agent_schedules(self):
+  return self.encode({"items":self.scheduled_agents.list()})
+ @Slot(str,str,int,int,result=str)
+ def schedule_agent_task(self,prompt,model,delay_minutes,repeat_minutes):
+  if model not in {slug for slug,_ in self.available_models}:
+   return self.encode({"error":"מודל לא זמין"})
+  try:return self.encode(self.scheduled_agents.add(prompt,model,delay_minutes,repeat_minutes))
+  except (ValueError,OSError) as exc:return self.encode({"error":str(exc)})
+ @Slot(str,result=str)
+ def cancel_agent_schedule(self,identifier):
+  try:return self.encode({"cancelled":self.scheduled_agents.cancel(identifier)})
+  except (ValueError,OSError) as exc:return self.encode({"error":str(exc)})
  @Slot(result=str)
  def list_reminders(self):
   return self.encode({"items":self.reminder_store.list()})
