@@ -454,6 +454,23 @@ class Bridge(QObject):
  def builtin_catalog(self):
   return self.encode({"items":list_builtins()})
 
+ def _poll_reminders(self):
+  try:
+   for reminder in self.reminder_store.due():
+    self.emit("reminder",title=reminder["title"])
+  except (OSError,ValueError) as exc:
+   self.events.status.emit("תזכורות: "+str(exc)[:120])
+ @Slot(result=str)
+ def list_reminders(self):
+  return self.encode({"items":self.reminder_store.list()})
+ @Slot(str,int,int,result=str)
+ def schedule_reminder(self,title,delay_minutes,repeat_minutes):
+  try:return self.encode(self.reminder_store.add(title,delay_minutes,repeat_minutes))
+  except (ValueError,OSError) as exc:return self.encode({"error":str(exc)})
+ @Slot(str,result=str)
+ def cancel_reminder(self,identifier):
+  try:return self.encode({"cancelled":self.reminder_store.cancel(identifier)})
+  except (ValueError,OSError) as exc:return self.encode({"error":str(exc)})
  @Slot(str,bool,result=str)
  def set_tool_permission(self,name,enabled):
   from openai_agent import TOOLS
