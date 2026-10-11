@@ -39,6 +39,9 @@ class DesktopAgent:
                 return {"cancelled":True}
             from windows_state import inspect_window
             return inspect_window(args.get("handle"))
+        if tool=="set_control_text":
+            from windows_state import set_control_text
+            return set_control_text(args.get("handle"),args.get("automation_id"),args.get("expected_name"),args.get("text"),self.approval)
         if tool=="activate_control":
             from windows_state import activate_control
             return activate_control(args.get("handle"),args.get("automation_id"),args.get("expected_name"),self.approval)
