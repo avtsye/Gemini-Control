@@ -3,7 +3,7 @@
 (() => {
   if (window.__gcGeminiBridge) return;
   window.__gcGeminiBridge = true;
-  const TRIGGER = /(?:השתמש(?:י)?\\s+בתוסף|באמצעות\\s+התוסף|use\\s+(?:the\\s+)?(?:gemini\\s+control\\s+)?extension)/i;
+  const TRIGGER = /(?:השתמש(?:י)?\s+בתוסף|באמצעות\s+התוסף|use\s+(?:the\s+)?(?:gemini\s+control\s+)?extension)/i;
   const host = document.createElement('div');
   host.id = 'gc-gemini-bridge';
   const shadow = host.attachShadow({ mode: 'closed' });
