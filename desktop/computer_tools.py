@@ -69,6 +69,35 @@ def computer_action(name, args, workspace, approve):
         for paragraph in body.splitlines():doc.add_paragraph(paragraph)
         doc.save(str(path))
         return {"created_docx":str(path)}
+    if name=="project_file":
+        project=args.get("project")
+        relative=args.get("path")
+        content=args.get("content")
+        import re
+        if not isinstance(project,str) or not re.fullmatch(r"[a-zA-Z0-9_ -]{1,64}",project) or project.strip()!=project:
+            raise ValueError("Invalid project name")
+        if not isinstance(relative,str) or len(relative)>160 or "\\\\" in relative:
+            raise ValueError("Invalid project path")
+        segments=relative.split("/")
+        if len(segments)>5 or any(not re.fullmatch(r"[a-zA-Z0-9_. -]{1,70}",bit) or bit in (".","..") or bit.startswith(".") for bit in segments):
+            raise ValueError("Invalid path components")
+        if Path(relative).suffix.lower() not in {".py",".js",".ts",".tsx",".jsx",".html",".css",".json",".md",".txt",".yml",".yaml",".toml",".csv"}:
+            raise ValueError("Unsupported code file extension")
+        if not isinstance(content,str) or len(content)>100000:
+            raise ValueError("Invalid project content")
+        root=Path(workspace)/"Projects"/project
+        target=root.joinpath(*segments)
+        if root.is_symlink() or any(path.is_symlink() for path in [root,*target.parents] if path.exists()) or target.is_symlink():
+            raise ValueError("Symlinks not allowed")
+        if (cancel:=_consent(approve,"ליצור או לעדכן קובץ בפרויקט "+project+": "+relative+"?")):return cancel
+        target.parent.mkdir(parents=True,exist_ok=True)
+        if target.exists():
+            import shutil
+            backup=root/".backups"
+            backup.mkdir(parents=True,exist_ok=True)
+            shutil.copy2(target,backup/(datetime.now().strftime("%Y%m%d-%H%M%S-%f")+"-"+target.name))
+        target.write_text(content,encoding="utf-8")
+        return {"saved_project_file":str(target)}
     if name=="email_draft":
         to=args.get("to");subject=args.get("subject","");body=args.get("body","")
         if not isinstance(to,str) or not 3<len(to)<255 or "@" not in to or any(c in to for c in "\r\n?&"):
