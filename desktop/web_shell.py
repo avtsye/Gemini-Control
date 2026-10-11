@@ -34,6 +34,7 @@ class Bridge(QObject):
   self._wait=threading.Event()
   self._allowed=False
   self.busy=False
+  self.active_task_chat=None
   self.available_models=[]
   self.agent=OpenAIComputerAgent(self.auth,self.approve,self.propose)
   # Background token refresh: do not block the main HTML window.
@@ -52,10 +53,12 @@ class Bridge(QObject):
   self.available_models=models
   self.emit("models",models=models,status=label)
  def on_message(self,role,message):
-  self.store.add(self.chat_id,role,message)
+  target=self.active_task_chat or self.chat_id
+  self.store.add(target,role,message)
   self.emit("message",role=role,text=message)
  def done(self):
   self.busy=False
+  self.active_task_chat=None
   self.emit("finished")
  def approve(self,description):
   self._wait.clear()
@@ -117,6 +120,7 @@ class Bridge(QObject):
   prior=self.store.messages(chat_id)[-8:]
   context="\n".join(("User: " if role=="user" else "Assistant: ")+content[:1000] for role,content in prior if role in ("user","assistant"))
   self.store.add(chat_id,"user",text)
+  self.active_task_chat=chat_id
   self.busy=True
   def worker():
    try:
@@ -164,6 +168,7 @@ class Bridge(QObject):
  def run_extension(self,identifier):
   if self.busy:return self.encode({"error":"משימה פעילה"})
   self.busy=True
+  self.active_task_chat=self.chat_id
   def worker():
    try:self.extensions.execute(identifier,self.agent.local,lambda m:self.events.message.emit("assistant",m))
    except Exception as e:self.events.message.emit("system_note","הרחבה נכשלה: "+str(e))
