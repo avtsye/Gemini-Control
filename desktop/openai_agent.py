@@ -3,7 +3,7 @@ import json
 from agent_core import DesktopAgent
 from task_journal import TaskJournal
 
-TOOLS={"create_capability","inspect_python_project","run_python_tests","fetch_page","move_workspace_file","sevenzip_status","list_available_tools","ocr_engines","ocr_image","ocr_pdf","speech_status","text_to_speech","transcribe_local","none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft","windows_snapshot","inspect_window","activate_control","observe_screen","workspace_files","inspect_workspace_file","open_workspace_file","installed_apps","system_status","set_control_text","propose_capability","create_pdf","compare_files","create_zip","extract_zip","create_spreadsheet","create_presentation","search_workspace","convert_data","image_info","convert_image","media_engines","probe_media","convert_media"}
+TOOLS={"create_capability","download_file","inspect_python_project","run_python_tests","fetch_page","move_workspace_file","sevenzip_status","list_available_tools","ocr_engines","ocr_image","ocr_pdf","speech_status","text_to_speech","transcribe_local","none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft","windows_snapshot","inspect_window","activate_control","observe_screen","workspace_files","inspect_workspace_file","open_workspace_file","installed_apps","system_status","set_control_text","propose_capability","create_pdf","compare_files","create_zip","extract_zip","create_spreadsheet","create_presentation","search_workspace","convert_data","image_info","convert_image","media_engines","probe_media","convert_media"}
 INSTRUCTIONS="""You assist the user with bounded Windows computer actions.
 Always return ONE valid JSON object, without markdown:
 {"message":"Short Hebrew response","tool":"none|list_files|read_file|write_file|open_app|draw_paint|screenshot|click|type_text|hotkey|open_browser|create_word|project_file|email_draft|windows_snapshot|inspect_window|activate_control|observe_screen|workspace_files|inspect_workspace_file|open_workspace_file|installed_apps|system_status|set_control_text|propose_capability|create_pdf|compare_files|create_zip|extract_zip|create_spreadsheet|create_presentation|search_workspace|convert_data|image_info|convert_image|media_engines|probe_media|convert_media","arguments":{}}.
@@ -56,6 +56,7 @@ RTL layout after approval; direction may be "ltr" for English. Never claim
 the PDF was created unless the tool returned "created_pdf". To make a PDF,
 use create_pdf rather than proposing a missing native tool.
 Other approved tools:
+download_file args={"url":"https://example.com/file.pdf","destination":"downloads/file.pdf"} downloads a public safe file to workspace with approval, size limits and no redirects.
 inspect_python_project args={"project":"Projects/MyApp"} parses Python syntax without executing code.
 run_python_tests args={"project":"Projects/MyApp"} runs unittest discovery only after explicit user approval; tests execute with local user permissions.
 fetch_page args={"url":"https://example.com/page"} retrieves the public HTML/text over HTTPS after permission, without following redirects.
