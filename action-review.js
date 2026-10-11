@@ -1,7 +1,7 @@
 'use strict';
 const $=id=>document.getElementById(id);
 let action=null;
-function done(t){$('status').textContent=t;$('approve').disabled=true}
+async function done(t){$('status').textContent=t;$('approve').disabled=true;await chrome.storage.session.set({geminiLastExecution:{status:'success',summary:String(t).slice(0,1200),time:Date.now()}})}
 function sanitizeSVG(text){
  const doc=new DOMParser().parseFromString(text,'image/svg+xml');
  if(doc.querySelector('parsererror'))throw Error('SVG לא תקין');
@@ -78,5 +78,5 @@ $('approve').onclick=async()=>{
    done('הציור נשמר בהורדות. אפשר לפתוח אותו בתוכנה התומכת ב-SVG.');
   }
   await chrome.storage.session.remove('pendingWebsiteAction');
- }catch(e){$('approve').disabled=false;$('status').textContent='שגיאה: '+String(e.message||e)}
+ }catch(e){$('approve').disabled=false;$('status').textContent='שגיאה: '+String(e.message||e);await chrome.storage.session.set({geminiLastExecution:{status:'error',summary:String(e.message||e).slice(0,500),time:Date.now()}})}
 };
