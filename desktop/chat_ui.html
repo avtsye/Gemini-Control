@@ -54,13 +54,24 @@ composer.addEventListener('drop',async event=>{
  event.preventDefault();composer.classList.remove('drop-target');
  const files=Array.from(event.dataTransfer?.files||[]).slice(0,12);
  for(const file of files){
-  if(!ALLOWED_DROPPED_EXT.test(file.name)||file.size>1000000){notify('גרירה אינה תומכת בקובץ '+file.name,'error');continue}
   try{
-   const text=await file.text();
-   const result=await call('attach_text',file.name,text);
-   const chip=element('button','📄 '+result.name,$('fileChips'));
-   chip.className='file-chip';chip.title='לחץ לתצוגה מקדימה';
-   chip.onclick=()=>{const panel=modal('תצוגה מקדימה: '+result.name);element('pre',text.slice(0,8000),panel)};
+   if(/\\.(png|jpg|jpeg)$/i.test(file.name)&&file.size<=5000000){
+    const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(Error('טעינת קובץ נכשלה'));reader.readAsDataURL(file)});
+    const base64=data.slice(data.indexOf(',')+1);
+    const result=await call('attach_image_base64',file.name,base64);
+    const chip=element('button','🖼 '+result.name,$('fileChips'));chip.className='file-chip';
+    chip.onclick=()=>{
+     const panel=modal('תצוגה מקדימה: '+result.name);
+     const preview=document.createElement('img');preview.src=data;preview.alt=result.name;
+     preview.style.maxWidth='100%';preview.style.maxHeight='60vh';panel.append(preview);
+    };
+   }else if(ALLOWED_DROPPED_EXT.test(file.name)&&file.size<=1000000){
+    const text=await file.text();
+    const result=await call('attach_text',file.name,text);
+    const chip=element('button','📄 '+result.name,$('fileChips'));
+    chip.className='file-chip';chip.title='לחץ לתצוגה מקדימה';
+    chip.onclick=()=>{const panel=modal('תצוגה מקדימה: '+result.name);element('pre',text.slice(0,8000),panel)};
+   }else{notify('גרירה אינה תומכת בקובץ '+file.name,'error')}
   }catch(error){notify(error.message,'error')}
  }
 });
@@ -373,7 +384,7 @@ window.addEventListener('keydown',event=>{
 });
 $('account').onclick=async()=>{try{const a=await call('account_details');const body=modal('החשבון והנתונים שלי');element('p',a.connected?'מחובר ל־ChatGPT':'לא מחובר',body);element('p','כתובת חשבון: '+a.email,body);element('p','מספר מודלים זמינים: '+a.model_count,body);element('p','מודלים: '+(a.models.join(', ')||'לא זמין'),body);element('p','נתוני שימוש: '+a.usage,body);element('p','מסד השיחות: '+a.history_path,body);element('p','יכולות מותקנות: '+a.capability_count,body)}catch(e){notify(e.message,'error')}};
 $('attach').onclick=async()=>{activity('בוחר ומעבד קובץ…',true);try{const a=await call('pick_attachment');if(a.cancelled){activity('מוכן לשיחה');return}
-for(const file of (a.items||[])){const chip=element('span','📄 '+file.name+' · '+file.characters+' תווים',$('fileChips'));chip.className='file-chip';chip.title='תוכן הקובץ ייכלל בהודעה לאחר השליחה';}
+for(const file of (a.items||[])){const chip=element('span',(file.image?'🖼️ '+file.name:'📄 '+file.name+' · '+file.characters+' תווים'),$('fileChips'));chip.className='file-chip';chip.title='תוכן הקובץ ייכלל בהודעה לאחר השליחה';}
 activity((a.items||[]).length+' קבצים צורפו · המידע לא הועבר עדיין למודל');}catch(e){notify(e.message,'error');activity('קריאת הקובץ נכשלה')}};
 
 $('stop').onclick=()=>call('toggle_agent').then(x=>status(x.message));
