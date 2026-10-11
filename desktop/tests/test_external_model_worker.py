@@ -1,7 +1,7 @@
 import json,pathlib,sys,tempfile,unittest
 from unittest.mock import patch
 sys.path.insert(0,str(pathlib.Path(__file__).resolve().parents[1]))
-from model_runtime import interpreter,worker_path,execute
+from model_runtime import interpreter,worker_path,execute,prepare_environment
 from model_worker import execute as model_execute
 from semantic_tools import _encode
 
@@ -40,6 +40,14 @@ class ExternalAIWorkerTests(unittest.TestCase):
   with self.assertRaises(ValueError):
    model_execute({"operation":"image","model":"/missing-model","prompt":"a landscape",
                   "target":"/tmp/file.png"})
+ def test_optional_package_install_rejected_without_consent(self):
+  with tempfile.TemporaryDirectory() as folder:
+   root=pathlib.Path(folder)
+   self.assertEqual(prepare_environment(root,["embedding"],lambda _:False),
+                    {"cancelled":True})
+   self.assertFalse((root/".ai-venv").exists())
+   with self.assertRaises(ValueError):
+    prepare_environment(root,["unknown-module"],lambda _:True)
  def test_unknown_operation_never_executes(self):
   with tempfile.TemporaryDirectory() as folder:
    with self.assertRaises(ValueError):model_execute({"operation":"shell","model":folder})
