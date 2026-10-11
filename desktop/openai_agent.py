@@ -2,10 +2,10 @@
 import json
 from agent_core import DesktopAgent
 
-TOOLS={"none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft","windows_snapshot","inspect_window","activate_control","observe_screen"}
+TOOLS={"none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft","windows_snapshot","inspect_window","activate_control","observe_screen","workspace_files","inspect_workspace_file","open_workspace_file"}
 INSTRUCTIONS="""You assist the user with bounded Windows computer actions.
 Always return ONE valid JSON object, without markdown:
-{"message":"Short Hebrew response","tool":"none|list_files|read_file|write_file|open_app|draw_paint|screenshot|click|type_text|hotkey|open_browser|create_word|project_file|email_draft|windows_snapshot|inspect_window|activate_control|observe_screen","arguments":{}}.
+{"message":"Short Hebrew response","tool":"none|list_files|read_file|write_file|open_app|draw_paint|screenshot|click|type_text|hotkey|open_browser|create_word|project_file|email_draft|windows_snapshot|inspect_window|activate_control|observe_screen|workspace_files|inspect_workspace_file|open_workspace_file","arguments":{}}.
 For open_app, arguments={"app":"notepad|paint|explorer|calculator"}.
 For requests to DRAW something in Microsoft Paint, always use tool="draw_paint"
 directly with arguments={"svg":"<svg xmlns=... viewBox=...>...</svg>"}.
@@ -35,6 +35,13 @@ Use inspect_window before activating controls. Never invent window handles,
 control IDs, labels or screenshots. Some apps use inaccessible custom canvases,
 and UI Automation may not expose their internals. If the requested control
 does not appear, explain the limitation. This is not full computer vision.
+Workspace file tools (permission-gated):
+workspace_files args={} lists up to 150 local workspace files, of any extension.
+inspect_workspace_file args={"path":"Projects/MyApp/README.md"} reads text, PDF
+or Word content where supported; for other formats reports metadata only.
+open_workspace_file args={"path":"report.pdf"} opens an existing non-executable
+workspace document via Windows default application. Do not claim arbitrary files
+outside the workspace are accessible, and do not run downloaded executables.
 Other approved tools:
 screenshot args={} saves a PNG to the workspace; does NOT expose pixels to the
 model or upload any image.
