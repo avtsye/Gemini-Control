@@ -23,6 +23,7 @@ dialog{border:1px solid var(--border);border-radius:17px;width:min(710px,92vw);m
 @media(max-width:780px){.side{width:180px;min-width:150px}.toolbar{padding:0 8px;flex-wrap:wrap;height:auto;min-height:65px}.toolbar .name{display:none}.messages{padding:12px}.composer-wrap{padding:10px}}
 .toast-area{position:fixed;top:18px;left:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;max-width:min(420px,90vw);pointer-events:none}.toast{pointer-events:auto;background:#202733;color:#fff;border-radius:14px;padding:14px 18px;box-shadow:0 12px 35px #0003;display:flex;align-items:center;gap:12px;line-height:1.6;border-right:4px solid #6fa1ff}.toast.error{border-right-color:#e76666}.toast.success{border-right-color:#51be87}.toast button{margin-right:auto;color:#fff;padding:3px 8px}.dialog-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px}.primary-action{background:#232323;color:#fff}.primary-action:hover{background:#454545}
 .activity{font-size:12px;color:#687282;display:flex;align-items:center;gap:8px;padding:8px 16px}.activity-dot{width:8px;height:8px;border-radius:50%;background:#8b929d}.activity.running .activity-dot{background:#25a776;animation:pulse 1.3s infinite}@keyframes pulse{50%{opacity:.2;transform:scale(.7)}}.file-chips{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px}.file-chip{padding:6px 10px;border-radius:10px;background:#edf3fc;color:#2b4e73;font-size:12px}.small-action{padding:7px 10px;border:1px solid #e1e5eb;border-radius:12px}
+.chat-row{display:flex;gap:3px;align-items:center}.chat-row>.item{flex:1;min-width:0}.chat-row>.small-action{flex:none;padding:4px 8px}#chatSearch{width:100%;border:1px solid var(--border);border-radius:10px;padding:9px;margin:4px 0 8px;background:var(--bg);color:var(--text)}
 </style></head><body><div class="shell">
 <aside class="side"><div class="brand">AI Control</div><button class="item" id="new">＋ שיחה חדשה</button><div class="section">השיחות שלך</div><input id="chatSearch" placeholder="חיפוש בכל השיחות..." aria-label="חיפוש בשיחות"><button class="item" id="backupChats">↓ גיבוי שיחות ל־JSON</button><div id="chats"></div><div class="side-actions"><button class="item" id="toolsCatalog">☷ כלים זמינים לסוכן</button><button class="item" id="capabilities">✦ סדנת יכולות חדשות</button><button class="item" id="extensions">◈ הרחבות</button><button class="item" id="proposals">◇ הצעות לשיפור</button><button class="item" id="delete">⌫ מחק שיחה</button></div></aside>
 <main class="main"><div class="toolbar"><span class="name">AI Control Desktop</span><button class="pill" id="account">החשבון שלי</button><button class="pill" id="login">התחבר ל־ChatGPT</button><select id="models" aria-label="מודל"></select><button class="pill" id="stop">עצור סוכן</button><span id="state">לא מחובר</span></div>
@@ -67,7 +68,24 @@ function addMessage(role,text,index=null){
  }
  thread.append(item);$('scroll').scrollTop=$('scroll').scrollHeight
 }
-async function loadChats(){const data=await call('chats');const box=$('chats');box.replaceChildren();for(const chat of data.items){const b=document.createElement('button');b.className='item'+(chat.id===data.active?' active':'');b.textContent=chat.title;b.onclick=()=>call('select_chat',chat.id).then(showChat).catch(e=>status(e.message));box.append(b)}}
+async function loadChats(){
+ const data=await call('chats');const box=$('chats');box.replaceChildren();
+ for(const chat of data.items){
+  if(chat.archived)continue;
+  const row=document.createElement('div');row.className='chat-row';
+  const b=element('button',(chat.pinned?'📌 ':'')+(chat.project?'['+chat.project+'] ':'')+chat.title,row);
+  b.className='item'+(chat.id===data.active?' active':'');
+  b.onclick=()=>call('select_chat',chat.id).then(showChat).catch(e=>status(e.message));
+  const menu=element('button','⋯',row);menu.title='ניהול שיחה';menu.className='small-action';
+  menu.onclick=()=>chatActions(chat.id,chat.title,chat.pinned,chat.archived);
+  box.append(row);
+ }
+ const archived=data.items.filter(x=>x.archived);
+ if(archived.length){const show=element('button','ארכיון ('+archived.length+')',box);show.className='item';show.onclick=()=>{
+   for(const chat of archived){const b=element('button',chat.title,box);b.className='item';b.onclick=()=>call('select_chat',chat.id).then(showChat)}
+   show.remove();
+  }}
+}
 async function searchConversations(){
  const query=$('chatSearch').value.trim();
  if(!query){loadChats();return}
