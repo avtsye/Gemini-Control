@@ -1,7 +1,0 @@
-{
-  "serverUrl": "http://127.0.0.1:3000",
-  "token": "studio_agent_persistent_token_v1",
-  "pin": "",
-  "autoConnect": false,
-  "permissionMode": "supervised"
-}

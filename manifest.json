@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Gemini Control — Chrome Only",
+  "version": "0.2.0",
+  "description": "Gemini assistant for Chrome tabs and explicitly selected local files, without a desktop server.",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["https://generativelanguage.googleapis.com/*"],
+  "action": {"default_popup":"popup.html","default_title":"Gemini Control"},
+  "background": {"service_worker":"background.js"}
+}
