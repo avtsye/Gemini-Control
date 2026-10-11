@@ -1,3 +1,12 @@
+# AI Control Desktop — חיבור רשמי ל-ChatGPT
+
+נוספה גרסת Windows חדשה ל-OpenAI: התחברות מאובטחת באמצעות **Continue with ChatGPT**, ללא הזנת מפתח API. בחשבון מתאים ניתן להשתמש במכסת המנוי לבקשות AI באמצעות Sign in with ChatGPT.
+
+**זו גרסת בדיקה להתחברות ולשיחה בלבד.** יכולות סוכן המחשב עדיין אינן מחוברות למנוע OpenAI בגרסה זו. הקוד הישן ל-Gemini ולגשר נשאר בפרויקט.
+
+[מדריך לגרסת OpenAI](desktop/OPENAI-SETUP.md) · [בניית EXE](https://github.com/avtsye/Gemini-Control/actions/workflows/build-desktop.yml)
+
+---
 # Gemini Control Desktop — מצב אתר Gemini (ללא API)
 
 **ה־EXE החדש** פותח את `https://gemini.google.com/app` בחלון Windows ומוסיף שכבת גשר מקומית עם אישור לכל פעולה. אין צורך במפתח Gemini API. הגרסה הקודמת מבוססת API נשארה בקוד לשם תאימות.
