@@ -26,3 +26,17 @@ async function pending(){
 $('review').onclick=()=>chrome.tabs.create({url:chrome.runtime.getURL('action-review.html')});
 pending();
 setInterval(pending,3000);
+
+let controls=[];
+$('inspect').onclick=async()=>{
+ try{const result=await send('inspect_controls');controls=result.controls||[];const select=$('control');select.replaceChildren();
+ controls.forEach((c,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=c.role+' · '+c.label;select.append(o)});
+ $('uiResult').textContent=controls.length+' רכיבים זמינים בחלון הפעיל';
+ }catch(e){$('uiResult').textContent='שגיאה: '+e.message}
+};
+$('clickControl').onclick=async()=>{
+ const c=controls[Number($('control').value)];if(!c)return;
+ if(!confirm('ללחוץ על "'+c.label+'" בתוכנה הפעילה?'))return;
+ try{const r=await send('click_control',{index:c.index,label:c.label});$('uiResult').textContent=r.message;controls=[];$('control').replaceChildren()}
+ catch(e){$('uiResult').textContent=e.message}
+};
