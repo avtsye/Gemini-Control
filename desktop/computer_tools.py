@@ -105,8 +105,8 @@ def computer_action(name, args, workspace, approve):
         if not isinstance(subject,str) or not isinstance(body,str) or len(subject)>200 or len(body)>2000:
             raise ValueError("Invalid message")
         if (cancel:=_consent(approve,"לפתוח טיוטת דוא״ל לנמען "+to+"? לא יישלח מייל ולא יצורף צילום מסך.")):return cancel
-        uri="mailto:"+quote(to,safe="@.")+"?subject="+quote(subject)+"&body="+quote(body)
+        uri="https://mail.google.com/mail/?view=cm&fs=1&to="+quote(to)+"&su="+quote(subject)+"&body="+quote(body)
         webbrowser.open(uri)
-        return {"draft_opened":to,"sent":False,"attachment_added":False,
+        return {"gmail_compose_opened":to,"sent":False,"attachment_added":False,
                 "note":"Attach the screenshot manually, inspect it, then send yourself."}
     raise ValueError("Unsupported desktop action")
