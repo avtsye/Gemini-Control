@@ -36,6 +36,14 @@ class DesktopAgent:
             if tool == "create_zip":
                 return create_zip(self.workspace,args.get("sources"),args.get("target"),self.approval)
             return extract_zip(self.workspace,args.get("archive"),args.get("destination"),self.approval)
+        if tool in {"speech_status","text_to_speech","transcribe_local"}:
+            from speech_tools import speech_status,text_to_speech,transcribe_local
+            if tool=="speech_status":return speech_status()
+            if tool=="text_to_speech":
+                return text_to_speech(self.workspace,args.get("text"),args.get("target"),
+                                      self.approval,args.get("rate",170))
+            return transcribe_local(self.workspace,args.get("source"),args.get("model_directory"),
+                                    args.get("target"),self.approval,args.get("language","he"))
         if tool in {"ocr_engines","ocr_image"}:
             from ocr_tools import ocr_engines,ocr_image
             if tool=="ocr_engines":return ocr_engines()
