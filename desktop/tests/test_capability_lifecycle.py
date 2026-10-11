@@ -24,6 +24,13 @@ class LifecycleTests(unittest.TestCase):
   last=self.workshop._manifest(self.workshop._path(self.identifier))["last_test"]
   self.assertTrue(last["passed"])
   self.assertEqual(last["source_sha256"],self.workshop._manifest(self.workshop._path(self.identifier))["source_sha256"])
+ def test_non_utf8_plugin_output_does_not_crash_reader(self):
+  code="import sys\ndef run(payload, output_dir):\n sys.stderr.buffer.write(bytes([0xe3,0x28,0xa1]))\n raise RuntimeError('broken output')"
+  ident=self.workshop.draft("Mixed encoding","",code)
+  self.workshop.activate(ident,True)
+  result=self.workshop.run(ident,{},lambda _:True)
+  self.assertIn("error",result)
+  self.assertIn("details",result)
  def test_dependency_validation(self):
   with self.assertRaises(PermissionError):self.workshop.set_dependencies(self.identifier,["Pillow==12.0.0"])
   with self.assertRaises(ValueError):self.workshop.set_dependencies(self.identifier,["--extra-index-url=https://bad.example"],True)
