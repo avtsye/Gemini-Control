@@ -27,6 +27,41 @@ class CapabilityWorkshop:
         self.root=Path(root or location().parent/"capabilities")
         self.root.mkdir(parents=True,exist_ok=True)
 
+    @staticmethod
+    def _runner_path():
+        # PyInstaller's extracted source script is bundled as explicit data.
+        base=Path(getattr(sys,"_MEIPASS",Path(__file__).resolve().parent))
+        path=base/"capability_runner.py"
+        if not path.is_file():
+            raise FileNotFoundError("Python capability runner missing from the application bundle")
+        return path
+
+    @staticmethod
+    def _system_python():
+        if not getattr(sys,"frozen",False):
+            return sys.executable
+        candidate=shutil.which("python")
+        if not candidate:
+            raise RuntimeError("Running Python plugins from the EXE requires a separate Python installation on PATH")
+        return candidate
+
+    def _interpreter(self,folder):
+        local=folder/"venv"/("Scripts/python.exe" if os.name=="nt" else "bin/python")
+        return str(local) if local.is_file() else self._system_python()
+
+    def _ensure_environment(self,folder):
+        env=folder/"venv"
+        if env.exists():return
+        if getattr(sys,"frozen",False):
+            python=self._system_python()
+            outcome=subprocess.run([python,"-m","venv",str(env)],
+                capture_output=True,text=True,encoding="utf-8",errors="replace",
+                timeout=120,shell=False)
+            if outcome.returncode:
+                raise RuntimeError("Could not create Python environment: "+outcome.stderr[-350:])
+        else:
+            venv.EnvBuilder(with_pip=True,clear=False).create(str(env))
+
     def _path(self, identifier):
         identifier=str(uuid.UUID(str(identifier)))
         folder=self.root/identifier
@@ -125,7 +160,7 @@ class CapabilityWorkshop:
         meta=self._manifest(folder)
         # Creation of an empty environment never executes untrusted capability source.
         env=folder/"venv"
-        if not env.exists():venv.EnvBuilder(with_pip=True,clear=False).create(str(env))
+        if not env.exists():self._ensure_environment(folder)
         return self.dependency_status(identifier)
 
     def install_dependencies(self,identifier,approve,timeout=120):
@@ -141,7 +176,7 @@ class CapabilityWorkshop:
             return {"cancelled":True}
         env=folder/"venv"
         if not env.exists():
-            venv.EnvBuilder(with_pip=True).create(str(env))
+            self._ensure_environment(folder)
         python=env/("Scripts/python.exe" if os.name=="nt" else "bin/python")
         cmd=[str(python),"-m","pip","--isolated","install","--disable-pip-version-check",
              "--no-input","--only-binary=:all:","--"]+packages
@@ -253,9 +288,9 @@ class CapabilityWorkshop:
         # Testing doesn't require enabling the capability; records evidence for review.
         output=folder/"test_outputs"
         output.mkdir(exist_ok=True)
-        runner=Path(__file__).with_name("capability_runner.py")
+        runner=self._runner_path()
         executable=folder/"venv"/("Scripts/python.exe" if os.name=="nt" else "bin/python")
-        interpreter=str(executable) if executable.is_file() else sys.executable
+        interpreter=self._interpreter(folder)
         if os.environ.get("GEMINI_CONTROL_PLUGIN_RUNTIME")=="docker":
             from container_capabilities import run_plugin
             isolated=run_plugin(folder/"main.py",output,payload,timeout)
