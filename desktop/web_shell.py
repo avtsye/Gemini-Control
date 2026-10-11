@@ -130,6 +130,18 @@ class Bridge(QObject):
  def review_proposal(self,identifier,status):
   try:self.store.review(identifier,status);return self.encode({"ok":True})
   except Exception as e:return self.encode({"error":str(e)})
+ @Slot(str,result=str)
+ def install_proposal(self,identifier):
+  proposal=next((row for row in self.store.proposals() if row[0]==identifier),None)
+  if not proposal:return self.encode({"error":"הצעה לא נמצאה"})
+  if proposal[3]!="approved":return self.encode({"error":"יש לאשר את ההצעה לפני התקנת הרחבה"})
+  try:
+   manifest=json.loads(proposal[2])
+   result=self.extensions.install(manifest)
+   return self.encode({"id":result,"enabled":False})
+  except (ValueError,TypeError) as e:
+   return self.encode({"error":"כדי להתקין יש לצרף תוכנית JSON תקינה: "+str(e)})
+
  @Slot(result=str)
  def extensions(self):
   return self.encode({"items":self.extensions.list()})
