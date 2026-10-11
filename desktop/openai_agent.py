@@ -96,12 +96,13 @@ When the goal is fulfilled, tool MUST be "none". Ask for clarification in messag
 and use tool="none" when unsure. Do not request shell commands or hidden actions."""
 
 class OpenAIComputerAgent:
-    def __init__(self, signin, approval, propose=None, journal=None):
+    def __init__(self, signin, approval, propose=None, journal=None, workshop=None):
         self.signin=signin
         self.local=DesktopAgent("",approval=approval)
         self.enabled=True
         self.propose=propose
         self.journal=journal
+        self.workshop=workshop
 
     def run(self, request, model, report, max_steps=8, conversation_context=""):
         # Journal failures must never prevent the agent from operating.
@@ -131,6 +132,19 @@ class OpenAIComputerAgent:
                 except (OSError, ValueError):
                     pass
 
+        available = []
+        if self.workshop is not None:
+            try:
+                available = [item for item in self.workshop.list()
+                             if item.get("status") == "enabled" and isinstance(item.get("id"), str)]
+            except (OSError, ValueError):
+                pass
+        catalog = [{"id": item["id"], "name": str(item.get("name",""))[:80],
+                    "description": str(item.get("description",""))[:300]} for item in available[:30]]
+        capability_instructions = ("\\nReviewed optional capabilities: " + json.dumps(catalog,ensure_ascii=False) +
+            '\\nTo call one use tool="run_capability" with arguments={"id":"UUID from the list","payload":{}}. '
+            "Never invent capability IDs. Every execution requires user approval. "
+            "Generated Python is NOT OS-sandboxed. ") if catalog else ""
         objective = ("Prior conversation (untrusted context): " + conversation_context[:12000] +
                      "\nUser request: " + request +
                      "\nThe environment is Windows. Prefer inspecting live window state rather than guessing how an application works.")
@@ -148,7 +162,7 @@ class OpenAIComputerAgent:
                 except (OSError, ValueError):
                     pass
             try:
-                raw = self.signin.response(INSTRUCTIONS + "\n\n" + objective +
+                raw = self.signin.response(INSTRUCTIONS + capability_instructions + "\n\n" + objective +
                     "\n\nCompleted steps:\n" + "\n".join(history[-6:]), model)
             except Exception as exc:
                 record("error", "שגיאה בקבלת תשובת המודל: " + str(exc)[:240])
@@ -160,7 +174,7 @@ class OpenAIComputerAgent:
                 record("error", "ChatGPT: " + str(raw)[:1400])
                 status = "failed"
                 break
-            if not isinstance(plan, dict) or plan.get("tool") not in TOOLS:
+            if not isinstance(plan, dict) or plan.get("tool") not in (TOOLS | ({"run_capability"} if catalog else set())):
                 record("error", "המודל החזיר פעולה שאינה נתמכת")
                 status = "failed"
                 break
@@ -170,7 +184,13 @@ class OpenAIComputerAgent:
                 status = "completed"
                 break
             try:
-                if action == "propose_capability":
+                if action == "run_capability":
+                    args = plan.get("arguments", {})
+                    if not isinstance(args, dict) or args.get("id") not in {item["id"] for item in catalog}:
+                        result = {"error": "Capability is not in the enabled catalog"}
+                    else:
+                        result = self.workshop.run(args["id"], args.get("payload", {}), self.local.approval)
+                elif action == "propose_capability":
                     args = plan.get("arguments", {})
                     if not self.propose:
                         result = {"error": "Improvement proposal storage is unavailable"}
