@@ -26,6 +26,21 @@ class ConversationEnhancementsTests(unittest.TestCase):
   self.db.edit_user_message(chat,0,"changed")
   self.assertEqual(self.db.messages(chat),[("user","changed")])
   with self.assertRaises(ValueError):self.db.edit_user_message(chat,99,"x")
+ def test_backup_roundtrip_and_id_remapping(self):
+  first=self.db.create("Export")
+  self.db.add(first,"user","export text")
+  self.db.set_flags(first,pinned=True,project="Project A")
+  backup=self.db.export_history()
+  with tempfile.TemporaryDirectory() as other:
+   target=ConversationStore(pathlib.Path(other)/"import.sqlite3")
+   result=target.restore_history(backup)
+   self.assertEqual(result["restored_chats"],1)
+   restored=target.chats_detailed()[0]
+   self.assertNotEqual(restored[0],first)
+   self.assertEqual(restored[4],"Project A")
+   self.assertEqual(target.messages(restored[0]),[("user","export text")])
+ def test_reject_invalid_restore(self):
+  with self.assertRaises(ValueError):self.db.restore_history({"version":1,"conversations":[],"messages":[["missing","assistant","x","now"]]})
  def test_backup_and_delete(self):
   chat=self.db.create()
   self.db.add(chat,"user","hello")
