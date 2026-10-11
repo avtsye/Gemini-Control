@@ -149,7 +149,7 @@ class Bridge(QObject):
    return self.encode({"workspace":str(workspace),
      "embedding":embedding_status(workspace,embedding_folder),
      "image":image_model_status(workspace,image_folder),
-     "speech":speech_status(),"ocr":ocr_engines(),"media":engines(),
+     "speech":speech_status(workspace),"ocr":ocr_engines(),"media":engines(),
      "note":"Models and optional Python packages are never downloaded automatically."})
   except (ValueError,OSError,ImportError) as exc:
    return self.encode({"error":"אבחון המודלים המקומיים נכשל: "+str(exc)[:240]})
