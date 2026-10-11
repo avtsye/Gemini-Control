@@ -21,6 +21,13 @@ on:
       - 'desktop/internet_tools.py'
       - 'desktop/project_quality.py'
       - 'desktop/knowledge_search.py'
+      - 'desktop/semantic_tools.py'
+      - 'desktop/local_image_generation.py'
+      - 'desktop/subagent_orchestrator.py'
+      - 'desktop/scheduled_agent_store.py'
+      - 'desktop/tests/test_offline_ai_adapters.py'
+      - 'desktop/tests/test_subagent_orchestrator.py'
+      - 'desktop/tests/test_scheduled_agent_store.py'
       - 'desktop/data_analysis.py'
       - 'desktop/tests/test_data_analysis.py'
       - 'desktop/tests/test_agent_registry.py'
@@ -94,6 +101,12 @@ jobs:
         run: python desktop/tests/test_agent_registry.py -v
       - name: Test CSV analytics and charts
         run: python desktop/tests/test_data_analysis.py -v
+      - name: Test local AI model adapters
+        run: python desktop/tests/test_offline_ai_adapters.py -v
+      - name: Test parallel analysis
+        run: python desktop/tests/test_subagent_orchestrator.py -v
+      - name: Test scheduled agent storage
+        run: python desktop/tests/test_scheduled_agent_store.py -v
       - name: Test offline knowledge search
         run: python desktop/tests/test_knowledge_search.py -v
       - name: Test project quality tools
