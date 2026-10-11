@@ -58,6 +58,30 @@ class BridgeHost {
   Process.Start(new ProcessStartInfo("mspaint.exe",String.Concat("\"",output,"\"")){UseShellExecute=false});
   return new {id=id,ok=true,message="Drawing created and opened in Paint",file=output};
  }
+
+ static readonly string Workspace=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),"GeminiControl-Workspace");
+ static string SafeFile(IDictionary<string,object> req){
+  string name=Str(req,"name");
+  if(name.Length<1||name.Length>100||name=="."||name==".."||name.IndexOfAny(Path.GetInvalidFileNameChars())>=0||name.Contains("/")||name.Contains("\\")||name.StartsWith("."))throw new ArgumentException("Invalid filename");
+  string ext=Path.GetExtension(name).ToLowerInvariant();
+  if(!new HashSet<string>(StringComparer.OrdinalIgnoreCase){".txt",".md",".json",".csv",".html",".css",".js",".ts",".py"}.Contains(ext))throw new ArgumentException("File extension not permitted");
+  Directory.CreateDirectory(Workspace);return Path.Combine(Workspace,name);
+ }
+ static object Files(IDictionary<string,object> request,object id,string cmd){
+  Directory.CreateDirectory(Workspace);
+  if(cmd=="list_files"){var names=new List<string>();foreach(string p in Directory.GetFiles(Workspace)){string n=Path.GetFileName(p);if(n.Length<101&&!n.StartsWith("."))names.Add(n);}return new{id=id,ok=true,files=names,folder=Workspace};}
+  string path=SafeFile(request);
+  if(cmd=="read_file"){if(!File.Exists(path))return new{id=id,ok=false,error="File not found"};if(new FileInfo(path).Length>100000)return new{id=id,ok=false,error="File too large"};return new{id=id,ok=true,name=Path.GetFileName(path),content=File.ReadAllText(path,Encoding.UTF8)};}
+  if(cmd=="write_file"){
+   string content=Str(request,"content");if(content.Length>50000)throw new ArgumentException("Content exceeds 50k characters");
+   if(File.Exists(path)){
+    string dir=Path.Combine(Workspace,".gemini-control-backups");Directory.CreateDirectory(dir);
+    File.Copy(path,Path.Combine(dir,DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff")+"-"+Path.GetFileName(path)),false);
+   }
+   File.WriteAllText(path,content,new UTF8Encoding(false));Audit("write_file",Path.GetFileName(path));return new{id=id,ok=true,name=Path.GetFileName(path),folder=Workspace,message="File saved with backup"};
+  }
+  return new{id=id,ok=false,error="Unknown file operation"};
+ }
  static object Handle(Dictionary<string,object> data){
   object id=Get(data,"id");string command=Str(data,"command");
   if(command=="ping"||command=="status")return new {id=id,ok=true,enabled=Enabled(),message="Gemini Control Bridge 0.3.0"};
@@ -65,6 +89,7 @@ class BridgeHost {
   if(command=="recent_log"){string[] lines=File.Exists(LogPath)?File.ReadAllLines(LogPath):new string[0];int start=Math.Max(0,lines.Length-30);var recent=new List<string>();for(int i=start;i<lines.Length;i++)recent.Add(lines[i]);return new{id=id,ok=true,lines=recent};}
   if(!Enabled())return new{id=id,ok=false,error="Bridge is disabled. Enable it in the control panel."};
   if(command=="list_apps")return new {id=id,ok=true,apps=new string[]{"notepad","calculator","explorer","paint"}};
+  if(command=="list_files"||command=="read_file"||command=="write_file")return Files(data,id,command);
   if(command=="draw_paint"){Audit(command,"approved");return Draw(data,id);}
   if(command=="open_app"){
    string app=Str(data,"app"),exe;
