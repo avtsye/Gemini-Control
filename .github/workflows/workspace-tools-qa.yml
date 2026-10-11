@@ -20,6 +20,10 @@ on:
       - 'desktop/file_organizer.py'
       - 'desktop/internet_tools.py'
       - 'desktop/project_quality.py'
+      - 'desktop/knowledge_tools.py'
+      - 'desktop/tool_policy.py'
+      - 'desktop/tests/test_knowledge_tools.py'
+      - 'desktop/tests/test_tool_policy.py'
       - 'desktop/tests/test_project_quality.py'
       - 'desktop/tests/test_internet_tools.py'
       - 'desktop/tests/test_file_organizer.py'
@@ -56,6 +60,10 @@ jobs:
         run: python desktop/tests/test_workspace_archives.py -v
       - name: Install document libraries
         run: python -m pip install openpyxl python-pptx
+      - name: Test indexed local knowledge
+        run: python desktop/tests/test_knowledge_tools.py -v
+      - name: Test tool permissions
+        run: python desktop/tests/test_tool_policy.py -v
       - name: Test project quality tools
         run: python desktop/tests/test_project_quality.py -v
       - name: Test permissioned HTTPS tool
