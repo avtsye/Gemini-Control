@@ -1,0 +1,29 @@
+name: Plugin Isolation QA
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'desktop/container_capabilities.py'
+      - 'desktop/capability_workshop.py'
+      - 'desktop/tests/test_container_capabilities.py'
+      - '.github/workflows/plugin-isolation-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile
+        run: python -m compileall -q desktop
+      - name: Validate closed Docker failure
+        run: python desktop/tests/test_container_capabilities.py -v
+      - name: Run plugin integration
+        run: python desktop/tests/test_capability_end_to_end.py -v
