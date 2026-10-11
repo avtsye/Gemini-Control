@@ -10,7 +10,7 @@ CAPABILITIES = [
  ("software_management","התקנה והסרת תוכנות","missing",[]),
  ("powershell","PowerShell","missing",[]),
  ("office","Word Excel PowerPoint PDF","partial",["create_word","create_spreadsheet","create_presentation","create_pdf"]),
- ("hebrew_ocr","OCR עברי","partial",["ocr_engines","ocr_image"]),
+ ("hebrew_ocr","OCR עברי","partial",["ocr_engines","ocr_image","ocr_pdf"]),
  ("organize_files","איתור וארגון קבצים","partial",["workspace_files","search_workspace","compare_files"]),
  ("archives","ZIP ו-7z","partial",["create_zip","extract_zip"]),
  ("convert_documents","המרות קבצים","partial",["convert_data"]),
