@@ -34,6 +34,14 @@ class ChatGPTSignIn:
             value=str(uuid.uuid4())
             host_path.write_text(value,encoding="utf-8")
         self.host_id="urn:uuid:"+value
+        self.registration_file=directory/"registration.json"
+        self.registration=None
+        try:
+            registration=json.loads(self.registration_file.read_text(encoding="utf-8"))
+            if registration.get("client_id","").startswith("oaiapp_") and registration.get("sub"):
+                self.registration=registration
+        except (OSError,ValueError,KeyError):
+            pass
 
     def sign_in(self, timeout=180):
         """Blocking method: run in a worker, never on Qt UI thread."""
@@ -57,13 +65,16 @@ class ChatGPTSignIn:
         server=HTTPServer(("127.0.0.1",0),Handler)
         server.timeout=1
         uri=f"http://127.0.0.1:{server.server_port}/auth/callback"
+        client_id=self.registration["client_id"] if self.registration else "dynamic_agent_client"
         params={
-            "client_id":"dynamic_agent_client","agent_name_hint":"Gemini Control Desktop",
+            "client_id":client_id,
             "ext_agent_host_id":self.host_id,"response_type":"code",
             "redirect_uri":uri,"scope":SCOPES,"resource":RESOURCE,
             "state":state,"nonce":nonce,
             "code_challenge_method":"S256","code_challenge":challenge
         }
+        if not self.registration:
+            params["agent_name_hint"]="Gemini Control Desktop"
         url=AUTH+"?"+urlencode(params)
         webbrowser.open(url)
         try:
@@ -78,7 +89,9 @@ class ChatGPTSignIn:
             raise SignInError("OAuth state mismatch")
         if "error" in received:raise SignInError("ההתחברות לא אושרה: "+received["error"])
         code=received.get("code")
-        issued=received.get("client_id")
+        issued=received.get("client_id",client_id)
+        if self.registration and issued!=self.registration["client_id"]:
+            raise SignInError("Client ID changed unexpectedly")
         if not code or not issued or issued=="dynamic_agent_client":
             raise SignInError("לא התקבלו קוד הרשאה ומזהה לקוח רשמי")
         response=requests.post(TOKEN,data={
@@ -95,6 +108,8 @@ class ChatGPTSignIn:
             claims=jwt.decode(id_token,key.key,algorithms=["RS256"],audience=issued,issuer=ISSUER)
         except Exception as e:
             raise SignInError("ID token validation failed") from e
+        if self.registration and str(claims.get("sub",""))!=self.registration["sub"]:
+            raise SignInError("Signed-in account does not match the saved registration")
         if not secrets.compare_digest(str(claims.get("nonce","")),nonce):
             raise SignInError("OIDC nonce mismatch")
         scopes=set(data.get("scope","").split())
@@ -102,6 +117,12 @@ class ChatGPTSignIn:
             raise SignInError("לא ניתנה הרשאה להשתמש במכסת ChatGPT. ההתחברות אינה מספיקה.")
         if not data.get("access_token"):
             raise SignInError("Missing access token")
+        if not self.registration:
+            self.registration={"client_id":issued,"sub":claims["sub"]}
+            # Only non-secret registration metadata is persisted, never OAuth tokens.
+            temp=self.registration_file.with_suffix(".tmp")
+            temp.write_text(json.dumps(self.registration),encoding="utf-8")
+            temp.replace(self.registration_file)
         self.client_id=issued
         self.access_token=data["access_token"]
         self.identity={"sub":claims["sub"],"email":claims.get("email","")}
