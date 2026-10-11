@@ -84,3 +84,23 @@ def download_file(workspace,url,destination,approve):
         return {"error":"Download failed","details":str(error)[:250]}
     finally:
         temp.unlink(missing_ok=True)
+
+def research_pages(urls,approve):
+    """Read 2-5 explicit public sources; no search-index discovery or fabrication."""
+    if not isinstance(urls,list) or not 2<=len(urls)<=5 or not all(isinstance(u,str) for u in urls):
+        raise ValueError("Provide between two and five HTTPS source URLs")
+    if len(set(urls))!=len(urls):raise ValueError("Duplicate source URL")
+    # Validate all hosts before asking the user to authorize any requests.
+    for url in urls:_validate_url(url)
+    if not approve("לקרוא עד חמישה מקורות אינטרנט ציבוריים ולהעביר את תוכנם למודל לצורך מחקר?"):
+        return {"cancelled":True}
+    sources=[]
+    for url in urls:
+        result=fetch_page(url,lambda _:True)
+        if "text" in result:
+            sources.append({"url":url,"text":result["text"][:6500],
+                            "truncated":result.get("truncated",False)})
+        else:
+            sources.append({"url":url,"error":result.get("error","Unavailable")})
+    return {"sources":sources,"successful":sum("text" in row for row in sources),
+            "note":"These are retrieved source texts; the model must cite each URL and cannot invent sources."}
