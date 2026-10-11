@@ -112,8 +112,11 @@ class BridgeHost {
   long handle;if(!long.TryParse(Str(data,"handle"),out handle))throw new ArgumentException("Invalid window handle");
   IntPtr h=new IntPtr(handle);
   if(!AllowedWindow(h))throw new ArgumentException("Window not allowlisted or no longer exists");
-  // Require the user to have manually focused the chosen application.
-  if(GetForegroundWindow()!=h)return new{id=id,ok=false,error="Click the selected app window first, then approve again"};
+  // The user chose this allowlisted window and approved the action in Chrome.
+  // Activate the selected window and verify it before sending any characters.
+  SetForegroundWindow(h);
+  System.Threading.Thread.Sleep(250);
+  if(GetForegroundWindow()!=h)return new{id=id,ok=false,error="Could not focus the selected application"};
   // Clipboard paste is intentionally avoided to protect clipboard data.
   foreach(char c in str){
    if(c=='\r')continue;
