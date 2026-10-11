@@ -24,6 +24,10 @@ class LifecycleTests(unittest.TestCase):
   result=self.workshop.set_dependencies(self.identifier,["Pillow==12.0.0"],True)
   self.assertEqual(result["installed"],False)
   self.assertFalse(self.workshop.dependency_status(self.identifier)["environment_ready"])
+ def test_dependency_install_denied_without_running_pip(self):
+  self.workshop.set_dependencies(self.identifier,["Pillow==12.0.0"],True)
+  self.assertEqual(self.workshop.install_dependencies(self.identifier,lambda _:False),{"cancelled":True})
+  self.assertFalse((self.workshop._path(self.identifier)/"venv").exists())
  def test_sensitive_import_cannot_activate(self):
   source="import subprocess\ndef run(payload, output_dir):\n return {}"
   self.workshop.revise(self.identifier,source,True)
