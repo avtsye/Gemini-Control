@@ -3,10 +3,10 @@ import json
 from agent_core import DesktopAgent
 from task_journal import TaskJournal
 
-TOOLS={"none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft","windows_snapshot","inspect_window","activate_control","observe_screen","workspace_files","inspect_workspace_file","open_workspace_file","installed_apps","system_status","set_control_text","propose_capability","create_pdf","compare_files","create_zip","extract_zip"}
+TOOLS={"none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft","windows_snapshot","inspect_window","activate_control","observe_screen","workspace_files","inspect_workspace_file","open_workspace_file","installed_apps","system_status","set_control_text","propose_capability","create_pdf","compare_files","create_zip","extract_zip","create_spreadsheet","create_presentation"}
 INSTRUCTIONS="""You assist the user with bounded Windows computer actions.
 Always return ONE valid JSON object, without markdown:
-{"message":"Short Hebrew response","tool":"none|list_files|read_file|write_file|open_app|draw_paint|screenshot|click|type_text|hotkey|open_browser|create_word|project_file|email_draft|windows_snapshot|inspect_window|activate_control|observe_screen|workspace_files|inspect_workspace_file|open_workspace_file|installed_apps|system_status|set_control_text|propose_capability|create_pdf|compare_files|create_zip|extract_zip","arguments":{}}.
+{"message":"Short Hebrew response","tool":"none|list_files|read_file|write_file|open_app|draw_paint|screenshot|click|type_text|hotkey|open_browser|create_word|project_file|email_draft|windows_snapshot|inspect_window|activate_control|observe_screen|workspace_files|inspect_workspace_file|open_workspace_file|installed_apps|system_status|set_control_text|propose_capability|create_pdf|compare_files|create_zip|extract_zip|create_spreadsheet|create_presentation","arguments":{}}.
 For open_app, arguments={"app":"notepad|paint|explorer|calculator"}.
 For requests to DRAW something in Microsoft Paint, always use tool="draw_paint"
 directly with arguments={"svg":"<svg xmlns=... viewBox=...>...</svg>"}.
@@ -56,6 +56,9 @@ RTL layout after approval; direction may be "ltr" for English. Never claim
 the PDF was created unless the tool returned "created_pdf". To make a PDF,
 use create_pdf rather than proposing a missing native tool.
 Other approved tools:
+create_spreadsheet args={"name":"data.xlsx","sheets":[{"name":"Data","rtl":true,"rows":[["Column","Value"],["Example",12]]}]} creates a real Excel workbook after approval.
+create_presentation args={"name":"slides.pptx","slides":[{"title":"Topic","bullets":["Point one","Point two"]}]} creates a real PowerPoint presentation after approval.
+The office generators need openpyxl/python-pptx installed and reject overwriting files.
 compare_files args={"left":"a.txt","right":"b.txt"} compares workspace files.
 create_zip args={"sources":["folder","notes.txt"],"target":"archive.zip"} creates a ZIP in the workspace.
 extract_zip args={"archive":"archive.zip","destination":"unpacked"} extracts a ZIP without overwriting existing files.
