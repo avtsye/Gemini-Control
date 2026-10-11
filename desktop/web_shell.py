@@ -471,6 +471,12 @@ class Bridge(QObject):
  def cancel_reminder(self,identifier):
   try:return self.encode({"cancelled":self.reminder_store.cancel(identifier)})
   except (ValueError,OSError) as exc:return self.encode({"error":str(exc)})
+ @Slot(result=str)
+ def diagnose_system(self):
+  try:
+   from diagnostics import inspect_environment
+   return self.encode(inspect_environment(self.workshop,self.store.path))
+  except (OSError,ValueError) as exc:return self.encode({"error":str(exc)[:240]})
  @Slot(str,bool,result=str)
  def set_tool_permission(self,name,enabled):
   from openai_agent import TOOLS
