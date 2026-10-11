@@ -215,6 +215,17 @@ class CapabilityWorkshop:
         runner=Path(__file__).with_name("capability_runner.py")
         executable=folder/"venv"/("Scripts/python.exe" if os.name=="nt" else "bin/python")
         interpreter=str(executable) if executable.is_file() else sys.executable
+        if os.environ.get("GEMINI_CONTROL_PLUGIN_RUNTIME")=="docker":
+            from container_capabilities import run_plugin
+            isolated=run_plugin(folder/"main.py",output,payload,timeout)
+            passed="error" not in isolated
+            details=json.dumps(isolated,ensure_ascii=True)[-1500:]
+            meta=self._manifest(folder)
+            meta["last_test"]={"passed":passed,"at":datetime.now(timezone.utc).isoformat(),
+                "source_sha256":hashlib.sha256(self.source(identifier).encode("utf-8")).hexdigest(),
+                "details":details}
+            self._write_manifest(folder,meta)
+            return {"passed":passed,"details":details,"isolated":True}
         try:
             process=subprocess.run([interpreter,str(runner),str(folder/"main.py"),str(output)],
                 input=json.dumps(payload,ensure_ascii=True),text=True,encoding="utf-8",capture_output=True,
@@ -269,6 +280,9 @@ class CapabilityWorkshop:
         runner=Path(__file__).with_name("capability_runner.py")
         executable=folder/"venv"/("Scripts/python.exe" if os.name=="nt" else "bin/python")
         interpreter=str(executable) if executable.is_file() else sys.executable
+        if os.environ.get("GEMINI_CONTROL_PLUGIN_RUNTIME")=="docker":
+            from container_capabilities import run_plugin
+            return run_plugin(folder/"main.py",output_dir,payload,timeout)
         result=subprocess.run([interpreter,str(runner),str(folder/"main.py"),str(output_dir)],
             input=json.dumps(payload,ensure_ascii=True),capture_output=True,text=True,encoding="utf-8",
             timeout=timeout,cwd=str(folder),shell=False)
