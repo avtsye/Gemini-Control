@@ -24,6 +24,7 @@ jobs:
           python desktop/tests/test_conversations.py -v
           python desktop/tests/test_extensions.py -v
           python desktop/tests/test_capability_workshop.py -v
+          python desktop/tests/test_capability_lifecycle.py -v
           python desktop/tests/test_workspace_archives.py -v
           python desktop/tests/test_task_journal.py -v
           python desktop/tests/test_office_tools.py -v
