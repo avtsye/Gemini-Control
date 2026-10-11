@@ -22,7 +22,7 @@ class Bridge(QObject):
  def __init__(self,parent=None):
   super().__init__(parent)
   self.store=ConversationStore()
-  self.extensions=ExtensionManager()
+  self.extension_manager=ExtensionManager()
   self.chat_id=self.store.chats()[0][0] if self.store.chats() else self.store.create()
   self.auth=ChatGPTSignIn()
   self.events=Events()
@@ -152,21 +152,21 @@ class Bridge(QObject):
   if proposal[3]!="approved":return self.encode({"error":"יש לאשר את ההצעה לפני התקנת הרחבה"})
   try:
    manifest=json.loads(proposal[2])
-   result=self.extensions.install(manifest)
+   result=self.extension_manager.install(manifest)
    return self.encode({"id":result,"enabled":False})
   except (ValueError,TypeError) as e:
    return self.encode({"error":"כדי להתקין יש לצרף תוכנית JSON תקינה: "+str(e)})
 
  @Slot(result=str)
  def extensions(self):
-  return self.encode({"items":self.extensions.list()})
+  return self.encode({"items":self.extension_manager.list()})
  @Slot(str,result=str)
  def install_extension(self,raw):
-  try:return self.encode({"id":self.extensions.install(json.loads(raw))})
+  try:return self.encode({"id":self.extension_manager.install(json.loads(raw))})
   except (ValueError,TypeError) as e:return self.encode({"error":str(e)})
  @Slot(str,bool,result=str)
  def toggle_extension(self,identifier,enabled):
-  try:self.extensions.toggle(identifier,enabled);return self.encode({"ok":True})
+  try:self.extension_manager.toggle(identifier,enabled);return self.encode({"ok":True})
   except (ValueError,OSError,PermissionError) as e:return self.encode({"error":str(e)})
  @Slot(str,result=str)
  def run_extension(self,identifier):
@@ -174,7 +174,7 @@ class Bridge(QObject):
   self.busy=True
   self.active_task_chat=self.chat_id
   def worker():
-   try:self.extensions.execute(identifier,self.agent.local,lambda m:self.events.message.emit("assistant",m))
+   try:self.extension_manager.execute(identifier,self.agent.local,lambda m:self.events.message.emit("assistant",m))
    except Exception as e:self.events.message.emit("system_note","הרחבה נכשלה: "+str(e))
    finally:self.events.finished.emit()
   threading.Thread(target=worker,daemon=True).start()
