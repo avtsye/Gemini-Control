@@ -114,8 +114,8 @@ class Bridge(QObject):
   if "image_bytes" in item:
    import base64
    return self.encode({"name":item["name"],"kind":"image",
-     "data_url":"data:image/"+("png" if item["name"].lower().endswith(".png") else "jpeg")
-     +";base64,"+base64.b64encode(item["image_bytes"]).decode("ascii")})
+     "data_url":"data:image/png;base64,"
+     +base64.b64encode(item["image_bytes"]).decode("ascii")})
   return self.encode({"name":item["name"],"kind":"text",
                        "text":str(item.get("text",""))[:8000]})
 
