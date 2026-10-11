@@ -2,10 +2,10 @@
 import json
 from agent_core import DesktopAgent
 
-TOOLS={"none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft"}
+TOOLS={"none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft","windows_snapshot","inspect_window","activate_control"}
 INSTRUCTIONS="""You assist the user with bounded Windows computer actions.
 Always return ONE valid JSON object, without markdown:
-{"message":"Short Hebrew response","tool":"none|list_files|read_file|write_file|open_app|draw_paint|screenshot|click|type_text|hotkey|open_browser|create_word|project_file|email_draft","arguments":{}}.
+{"message":"Short Hebrew response","tool":"none|list_files|read_file|write_file|open_app|draw_paint|screenshot|click|type_text|hotkey|open_browser|create_word|project_file|email_draft|windows_snapshot|inspect_window|activate_control","arguments":{}}.
 For open_app, arguments={"app":"notepad|paint|explorer|calculator"}.
 For requests to DRAW something in Microsoft Paint, always use tool="draw_paint"
 directly with arguments={"svg":"<svg xmlns=... viewBox=...>...</svg>"}.
@@ -19,6 +19,17 @@ Allowed SVG elements: svg,g,path,rect,circle,ellipse,line,polygon,polyline,
 defs,linearGradient,radialGradient,stop.
 Never claim success or say the drawing was created until draw_paint returns a
 created_png path and opened_in=paint. If the operation fails, address the error.
+Windows-native, application-independent UI discovery tools:
+- windows_snapshot args={} lists visible window handles, titles and bounding rectangles.
+- inspect_window args={"handle":123} provides real UI Automation control IDs, names,
+  types, enabled state and rectangles for that window, without sending passwords.
+- activate_control args={"handle":123,"automation_id":"Button1","expected_name":"Save"}
+  invokes an enabled Button/CheckBox/RadioButton only if it still matches the
+  last discovered ID and label; user approval is required.
+Use inspect_window before activating controls. Never invent window handles,
+control IDs, labels or screenshots. Some apps use inaccessible custom canvases,
+and UI Automation may not expose their internals. If the requested control
+does not appear, explain the limitation. This is not full computer vision.
 Other approved tools:
 screenshot args={} saves a PNG to the workspace; does NOT expose pixels to the
 model or upload any image.
@@ -52,8 +63,8 @@ class OpenAIComputerAgent:
         self.local=DesktopAgent("",approval=approval)
         self.enabled=True
 
-    def run(self, request, model, report, max_steps=5):
-        context="User request: "+request
+    def run(self, request, model, report, max_steps=8):
+        context="User request: "+request+"\nThe environment is Windows. Prefer inspecting live window state rather than guessing how an application works."
         for index in range(max_steps):
             if not self.enabled:
                 report("הפעולות הופסקו")
@@ -84,4 +95,4 @@ class OpenAIComputerAgent:
                      json.dumps(result,ensure_ascii=False)[:12000]+
                      "\nContinue based on the tool result, or finish.")
         else:
-            report("הושלמה מכסת הפעולות לבקשה זו (5 צעדים).")
+            report("הושלמה מכסת הפעולות לבקשה זו (8 צעדים).")
