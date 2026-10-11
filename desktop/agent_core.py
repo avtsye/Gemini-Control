@@ -38,6 +38,9 @@ class DesktopAgent:
         if not self.enabled:
             raise PermissionError("Agent is paused")
         args = arguments if isinstance(arguments, dict) else {}
+        if tool in {"screenshot","click","type_text","hotkey","open_browser","create_word","email_draft"}:
+            from computer_tools import computer_action
+            return computer_action(tool,args,self.workspace,self.approval)
         if tool == "draw_paint":
             from drawing_tool import draw_in_paint
             return draw_in_paint(args.get("svg"), self.workspace, self.approval)
