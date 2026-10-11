@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Gemini Control — Chrome Only",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Gemini AI browser and Windows assistant with reviewed task plans and local file workspace",
   "permissions": [
     "activeTab",
@@ -18,7 +18,7 @@
         "https://gemini.google.com/*"
       ],
       "js": [
-        "gemini-bridge.js"
+        "gemini-protocol.js"
       ],
       "run_at": "document_idle"
     }
