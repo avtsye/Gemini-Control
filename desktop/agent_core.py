@@ -36,6 +36,11 @@ class DesktopAgent:
             if tool == "create_zip":
                 return create_zip(self.workspace,args.get("sources"),args.get("target"),self.approval)
             return extract_zip(self.workspace,args.get("archive"),args.get("destination"),self.approval)
+        if tool in {"media_engines","probe_media","convert_media"}:
+            from media_tools import engines,probe_media,convert_media
+            if tool=="media_engines":return engines()
+            if tool=="probe_media":return probe_media(self.workspace,args.get("name"),self.approval)
+            return convert_media(self.workspace,args.get("source"),args.get("target"),self.approval)
         if tool in {"image_info","convert_image"}:
             from image_tools import image_info,convert_image
             if tool=="image_info":
