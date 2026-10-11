@@ -1,0 +1,32 @@
+name: Validate Chrome extension
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check JavaScript syntax
+        run: |
+          for file in background.js popup.js workspace.js gemini-bridge.js; do
+            node --check "$file"
+          done
+      - name: Validate extension manifest and static assets
+        run: |
+          python3 - <<'PY'
+          import json, pathlib
+          root=pathlib.Path('.')
+          manifest=json.loads((root/'manifest.json').read_text())
+          assert manifest['manifest_version']==3
+          assert manifest['background']['service_worker']=='background.js'
+          assert any('https://gemini.google.com/*' in x['matches'] and 'gemini-bridge.js' in x['js'] for x in manifest['content_scripts'])
+          for f in ('background.js','gemini-bridge.js','popup.html','popup.js','workspace.html','workspace.js'):
+              assert (root/f).is_file(), f
+          for html,script in (('popup.html','popup.js'),('workspace.html','workspace.js')):
+              assert script in (root/html).read_text(), (html,script)
+          print('Manifest and entrypoints validated')
+          PY
