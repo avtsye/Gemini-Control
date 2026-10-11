@@ -11,7 +11,6 @@ if (-not (Test-Path $source)){throw "Missing BridgeHost.cs"}
 Write-Host 'Building minimal bridge with Windows PowerShell/.NET Framework...'
 Add-Type -Path $source -OutputAssembly $exe -OutputType ConsoleApplication -ReferencedAssemblies 'System.Web.Extensions.dll'
 $manifest=Join-Path $here 'org.gemini_control.bridge.json'
-$normalized=$exe.Replace('\','\\')
 $data=@{
   name='org.gemini_control.bridge'
   description='Gemini Control Local Windows Bridge'
@@ -19,7 +18,7 @@ $data=@{
   type='stdio'
   allowed_origins=@("chrome-extension://$ExtensionId/")
 }
-$data | ConvertTo-Json -Depth 6 | Set-Content -Encoding UTF8 $manifest
+[System.IO.File]::WriteAllText($manifest, ($data | ConvertTo-Json -Depth 6), (New-Object System.Text.UTF8Encoding($false)))
 $reg='HKCU:\Software\Google\Chrome\NativeMessagingHosts\org.gemini_control.bridge'
 New-Item -Path $reg -Force | Out-Null
 Set-Item -Path $reg -Value $manifest
