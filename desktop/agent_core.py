@@ -37,7 +37,7 @@ class DesktopAgent:
         if tool=="activate_control":
             from windows_state import activate_control
             return activate_control(args.get("handle"),args.get("automation_id"),args.get("expected_name"),self.approval)
-        if tool in {"screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft"}:
+        if tool in {"screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft","workspace_files","inspect_workspace_file","open_workspace_file"}:
             from computer_tools import computer_action
             return computer_action(tool,args,self.workspace,self.approval)
         if tool == "draw_paint":
