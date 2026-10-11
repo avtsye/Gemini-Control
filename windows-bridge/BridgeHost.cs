@@ -7,7 +7,7 @@ using System.Web.Script.Serialization;
 class BridgeHost {
   static readonly JavaScriptSerializer Json = new JavaScriptSerializer();
   static readonly Dictionary<string,string> Apps = new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase) {
-    {"notepad","notepad.exe"},{"calculator","calc.exe"},{"explorer","explorer.exe"}
+    {"notepad","notepad.exe"},{"calculator","calc.exe"},{"explorer","explorer.exe"},{"paint","mspaint.exe"}
   };
   static byte[] ReadExact(Stream stream,int n) {
     byte[] data=new byte[n];int pos=0;
@@ -22,7 +22,7 @@ class BridgeHost {
     object cmdObj,idObj;request.TryGetValue("command",out cmdObj);request.TryGetValue("id",out idObj);
     string command=Convert.ToString(cmdObj??"");
     if(command=="ping")return new {id=idObj,ok=true,message="Gemini Control Windows Bridge 0.1.0"};
-    if(command=="list_apps")return new {id=idObj,ok=true,apps=new string[]{"notepad","calculator","explorer"}};
+    if(command=="list_apps")return new {id=idObj,ok=true,apps=new string[]{"notepad","calculator","explorer","paint"}};
     if(command=="open_app") {
       object appObj;request.TryGetValue("app",out appObj);
       string app=Convert.ToString(appObj??"");
