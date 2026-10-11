@@ -36,6 +36,13 @@ class DesktopAgent:
             if tool == "create_zip":
                 return create_zip(self.workspace,args.get("sources"),args.get("target"),self.approval)
             return extract_zip(self.workspace,args.get("archive"),args.get("destination"),self.approval)
+        if tool in {"git_engine","git_status","git_diff","git_commit"}:
+            from git_tools import git_engine,git_status,git_diff,git_commit
+            if tool=="git_engine":return git_engine()
+            project=args.get("project")
+            if tool=="git_status":return git_status(self.workspace,project,self.approval)
+            if tool=="git_diff":return git_diff(self.workspace,project,self.approval)
+            return git_commit(self.workspace,project,args.get("paths"),args.get("message"),self.approval)
         if tool=="schedule_reminder":
             from reminder_store import ReminderStore
             title=args.get("title")
