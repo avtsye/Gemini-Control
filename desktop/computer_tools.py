@@ -98,6 +98,57 @@ def computer_action(name, args, workspace, approve):
             shutil.copy2(target,backup/(datetime.now().strftime("%Y%m%d-%H%M%S-%f")+"-"+target.name))
         target.write_text(content,encoding="utf-8")
         return {"saved_project_file":str(target)}
+    if name in {"workspace_files","inspect_workspace_file","open_workspace_file"}:
+        import os
+        root=Path(workspace).resolve()
+        root.mkdir(parents=True,exist_ok=True)
+        if name=="workspace_files":
+            if (cancel:=_consent(approve,"להציג למודל את רשימת הקבצים והתיקיות בתיקיית העבודה?")):return cancel
+            items=[]
+            for file in root.rglob("*"):
+                if len(items)>=150:break
+                if file.is_symlink():continue
+                try:
+                    items.append({"path":file.relative_to(root).as_posix(),
+                                  "is_dir":file.is_dir(),
+                                  "size":file.stat().st_size if file.is_file() else None})
+                except (OSError,ValueError):continue
+            return {"workspace_items":items,"truncated":len(items)>=150}
+        rel=args.get("path")
+        if not isinstance(rel,str) or not rel or len(rel)>250 or "\\\\" in rel:
+            raise ValueError("Invalid workspace path")
+        pieces=rel.split("/")
+        if any(x in ("",".","..") or x.startswith(".") for x in pieces):
+            raise ValueError("Unsafe path")
+        target=root.joinpath(*pieces)
+        if not target.is_file() or target.is_symlink() or not target.resolve().is_relative_to(root):
+            raise ValueError("File unavailable in workspace")
+        ext=target.suffix.lower()
+        if name=="open_workspace_file":
+            forbidden={".exe",".bat",".cmd",".ps1",".vbs",".js",".jar",".msi",
+                       ".scr",".com",".lnk",".url",".hta",".reg",".dll",".sys",".wsf"}
+            if ext in forbidden:raise ValueError("Executable or shortcut files cannot be launched")
+            if (cancel:=_consent(approve,"לפתוח במחשב את הקובץ "+rel+" באמצעות יישום ברירת המחדל?")):return cancel
+            os.startfile(str(target))
+            return {"opened_file":rel}
+        if (cancel:=_consent(approve,"לקרוא מידע/תוכן מהקובץ "+rel+" ולשלוח למודל OpenAI?")):return cancel
+        size=target.stat().st_size
+        if size>15_000_000:raise ValueError("File exceeds inspection limit")
+        result={"name":rel,"size":size,"extension":ext}
+        if ext==".pdf":
+            from pypdf import PdfReader
+            reader=PdfReader(str(target))
+            result["pages"]=len(reader.pages)
+            result["text"]="\n".join((page.extract_text() or "") for page in reader.pages[:5])[:12000]
+        elif ext==".docx":
+            from docx import Document
+            doc=Document(str(target))
+            result["text"]="\n".join(paragraph.text for paragraph in doc.paragraphs)[:12000]
+        elif ext in {".txt",".md",".py",".js",".json",".html",".css",".csv",".xml",".yaml",".yml",".toml",".log",".ini",".ts",".tsx",".jsx",".sql"}:
+            result["text"]=target.read_text(encoding="utf-8",errors="replace")[:12000]
+        else:
+            result["note"]="File metadata available; content decoding not implemented for this format."
+        return result
     if name=="email_draft":
         to=args.get("to");subject=args.get("subject","");body=args.get("body","")
         if not isinstance(to,str) or not 3<len(to)<255 or "@" not in to or any(c in to for c in "\r\n?&"):
