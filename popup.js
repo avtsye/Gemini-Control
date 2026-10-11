@@ -1,3 +1,4 @@
+document.getElementById('agent').onclick=()=>chrome.tabs.create({url:chrome.runtime.getURL('agent.html')});
 const $=id=>document.getElementById(id);let pending=null;
 $('workspace').onclick=()=>chrome.tabs.create({url:chrome.runtime.getURL('workspace.html')});
 function report(text,error=false){$('response').textContent=text;$('response').classList.toggle('error',error)}
