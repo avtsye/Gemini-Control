@@ -100,16 +100,19 @@ class ConversationStore:
             conversations=db.execute("SELECT id,title,created,updated FROM conversations").fetchall()
             messages=db.execute("SELECT conversation_id,role,content,created FROM messages ORDER BY id").fetchall()
             flags=self.chats_detailed()
-        return {"version":1,"conversations":conversations,"messages":messages,"flags":flags}
+            project_notes=db.execute("SELECT name,notes FROM project_notes").fetchall()
+        return {"version":1,"conversations":conversations,"messages":messages,"flags":flags,"project_notes":project_notes}
     def restore_history(self,backup):
         if not isinstance(backup,dict) or backup.get("version")!=1:
             raise ValueError("Unsupported backup")
         conversations=backup.get("conversations")
         messages=backup.get("messages")
         flags=backup.get("flags",[])
+        project_notes=backup.get("project_notes",[])
         if (not isinstance(conversations,list) or not isinstance(messages,list)
             or not isinstance(flags,list) or len(conversations)>500
-            or len(messages)>25000 or len(flags)>500):
+            or len(messages)>25000 or len(flags)>500
+            or not isinstance(project_notes,list) or len(project_notes)>500):
             raise ValueError("Invalid backup size")
         mappings={}
         timestamp=datetime.now(timezone.utc).isoformat()
@@ -135,6 +138,12 @@ class ConversationStore:
                     raise ValueError("Invalid message content")
                 db.execute("INSERT INTO messages(conversation_id,role,content,created) VALUES(?,?,?,?)",
                            (mappings[old],role,content,timestamp))
+            for note in project_notes:
+                if (not isinstance(note,(list,tuple)) or len(note)!=2 or
+                    not isinstance(note[0],str) or not 1<=len(note[0])<=80 or
+                    not isinstance(note[1],str) or len(note[1])>12000):
+                    raise ValueError("Invalid project memory record")
+                db.execute("INSERT OR IGNORE INTO project_notes(name,notes) VALUES(?,?)",note)
             for row in flags:
                 if not isinstance(row,(list,tuple)) or len(row)!=5:raise ValueError("Invalid flags")
                 old,title,pin,arc,project=row
