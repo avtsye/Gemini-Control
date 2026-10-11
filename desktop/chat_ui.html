@@ -466,7 +466,21 @@ window.addEventListener('keydown',event=>{
 });
 $('account').onclick=async()=>{try{const a=await call('account_details');const body=modal('החשבון והנתונים שלי');element('p',a.connected?'מחובר ל־ChatGPT':'לא מחובר',body);element('p','כתובת חשבון: '+a.email,body);element('p','מספר מודלים זמינים: '+a.model_count,body);element('p','מודלים: '+(a.models.join(', ')||'לא זמין'),body);element('p','נתוני שימוש: '+a.usage,body);element('p','מסד השיחות: '+a.history_path,body);element('p','יכולות מותקנות: '+a.capability_count,body)}catch(e){notify(e.message,'error')}};
 $('attach').onclick=async()=>{activity('בוחר ומעבד קובץ…',true);try{const a=await call('pick_attachment');if(a.cancelled){activity('מוכן לשיחה');return}
-for(const file of (a.items||[])){const chip=element('span',(file.image?'🖼️ '+file.name:'📄 '+file.name+' · '+file.characters+' תווים'),$('fileChips'));chip.className='file-chip';chip.title='תוכן הקובץ ייכלל בהודעה לאחר השליחה';}
+for(const [offset,file] of (a.items||[]).entries()){
+ const chip=element('button',(file.image?'🖼 '+file.name:'📄 '+file.name+' · '+file.characters+' תווים'),$('fileChips'));
+ chip.className='file-chip';chip.title='לחץ לתצוגה מקדימה';
+ const index=a.pending-(a.items||[]).length+offset;
+ chip.onclick=async()=>{
+  try{
+   const content=await call('preview_attachment',index);
+   const body=modal('תצוגה מקדימה: '+content.name);
+   if(content.kind==='image'){
+    const img=document.createElement('img');img.src=content.data_url;
+    img.alt=content.name;img.style.maxWidth='100%';img.style.maxHeight='65vh';body.append(img);
+   }else element('pre',content.text||'',body);
+  }catch(e){notify(e.message,'error')}
+ };
+}
 activity((a.items||[]).length+' קבצים צורפו · המידע לא הועבר עדיין למודל');}catch(e){notify(e.message,'error');activity('קריאת הקובץ נכשלה')}};
 
 $('stop').onclick=()=>call('toggle_agent').then(x=>{status(x.message);$('stop').textContent=x.enabled?'עצור סוכן':'המשך סוכן';$('agent').checked=x.enabled}).catch(e=>notify(e.message,'error'));
