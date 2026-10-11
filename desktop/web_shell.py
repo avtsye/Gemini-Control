@@ -36,6 +36,7 @@ class Bridge(QObject):
   self.busy=False
   self.active_task_chat=None
   self.available_models=[]
+  self.logins_in_progress=False
   self.agent=OpenAIComputerAgent(self.auth,self.approve,self.propose)
   # Background token refresh: do not block the main HTML window.
   threading.Thread(target=self.restore,daemon=True).start()
@@ -98,11 +99,14 @@ class Bridge(QObject):
   return self.select_chat(self.chat_id)
  @Slot(result=str)
  def login(self):
+  if self.logins_in_progress:return self.encode({"error":"כבר מתבצע תהליך התחברות"})
+  self.logins_in_progress=True
   def worker():
    try:
     identity=self.auth.sign_in()
     self.events.models.emit((self.auth.models(),"מחובר ל־ChatGPT"))
    except Exception as e:self.events.status.emit("שגיאת התחברות: "+str(e)[:150])
+   finally:self.logins_in_progress=False
   threading.Thread(target=worker,daemon=True).start()
   return self.encode({"started":True})
  @Slot(result=str)
