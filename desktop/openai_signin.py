@@ -2,7 +2,7 @@
 No API key, browser scraping, or disabled TLS verification.
 Access tokens remain in memory for this first version (sign in again after restart).
 """
-import base64, hashlib, json, secrets, threading, uuid, webbrowser, os
+import base64, hashlib, json, secrets, threading, uuid, webbrowser, os, time
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlencode, urlparse, parse_qs
 from pathlib import Path
@@ -10,6 +10,7 @@ import truststore
 truststore.inject_into_ssl()  # Honor the Windows trust store, including trusted filter root CAs.
 import requests
 import jwt
+import keyring
 from jwt import PyJWKClient
 
 AUTH="https://auth.openai.com/api/accounts/authorize"
@@ -27,6 +28,8 @@ class ChatGPTSignIn:
         self.identity=None
         self.client_id=None
         self.scopes=set()
+        self.refresh_token=None
+        self.expires_at=0
         directory=Path(os.environ.get("LOCALAPPDATA",Path.home()/".config"))/"GeminiControl"
         directory.mkdir(parents=True,exist_ok=True)
         host_path=directory/"host-id"
@@ -126,13 +129,45 @@ class ChatGPTSignIn:
             temp.write_text(json.dumps(self.registration),encoding="utf-8")
             temp.replace(self.registration_file)
         self.client_id=issued
+        self.refresh_token=data.get("refresh_token")
+        self.expires_at=time.time()+int(data.get("expires_in",3600))
+        if self.refresh_token:
+            keyring.set_password("AIControlDesktop","refresh:"+claims["sub"],self.refresh_token)
         self.access_token=data["access_token"]
         self.identity={"sub":claims["sub"],"email":claims.get("email","")}
         self.scopes=scopes
         return self.identity
 
+    def restore_session(self):
+        """Refresh from Windows Credential Manager; never save tokens as plaintext."""
+        if not self.registration:return False
+        client_id=self.registration["client_id"]
+        stored=keyring.get_password("AIControlDesktop","refresh:"+self.registration["sub"])
+        if not stored:return False
+        try:
+            r=requests.post(TOKEN,data={"grant_type":"refresh_token","client_id":client_id,
+                "refresh_token":stored,"resource":RESOURCE},timeout=30)
+            r.raise_for_status()
+            data=r.json()
+            if not data.get("access_token"):return False
+            self.access_token=data["access_token"]
+            self.refresh_token=data.get("refresh_token",stored)
+            self.expires_at=time.time()+int(data.get("expires_in",3600))
+            self.client_id=client_id
+            self.identity={"sub":self.registration["sub"]}
+            if self.refresh_token!=stored:
+                keyring.set_password("AIControlDesktop","refresh:"+self.registration["sub"],self.refresh_token)
+            return True
+        except (requests.RequestException,ValueError):
+            return False
+
+    def ensure_fresh(self):
+        if self.expires_at and time.time()+60>=self.expires_at:
+            if not self.restore_session():raise SignInError("פג תוקף החיבור. התחבר שוב ל-ChatGPT.")
+
     def models(self):
         if not self.access_token: raise SignInError("Not authenticated")
+        self.ensure_fresh()
         response=requests.get(RESOURCE+"/models",
             headers={"Authorization":"Bearer "+self.access_token},timeout=25)
         response.raise_for_status()
@@ -142,6 +177,7 @@ class ChatGPTSignIn:
 
     def response(self, prompt,model):
         if not self.access_token:raise SignInError("תחילה יש להתחבר עם ChatGPT")
+        self.ensure_fresh()
         chunks=[]
         completed=False
         with requests.post(RESOURCE+"/responses",
