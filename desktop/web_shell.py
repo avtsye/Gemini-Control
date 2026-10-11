@@ -117,30 +117,46 @@ class Bridge(QObject):
    if item.get("error"):return self.encode({"error":item["error"],"added":added})
    added.append(item)
   return self.encode({"items":added,"pending":len(self.attachments)})
+ def _append_image(self,name,raw):
+  if not isinstance(name,str) or Path(name).name!=name or not name.lower().endswith((".png",".jpg",".jpeg")):
+   return self.encode({"error":"שם תמונה לא תקין"})
+  if len(self.attachments)>=12 or len([x for x in self.attachments if "image_bytes" in x])>=4:
+   return self.encode({"error":"מותר לצרף עד 12 קבצים, מתוכם עד 4 תמונות"})
+  if not isinstance(raw,bytes) or len(raw)>5_000_000:
+   return self.encode({"error":"קובץ תמונה גדול מדי"})
+  try:
+   import io
+   from PIL import Image,ImageOps
+   with Image.open(io.BytesIO(raw)) as image:
+    if image.width*image.height>24_000_000:
+     return self.encode({"error":"התמונה גדולה מדי"})
+    converted=ImageOps.exif_transpose(image)
+    converted.thumbnail((1920,1920))
+    output=io.BytesIO()
+    converted.convert("RGB").save(output,format="PNG")
+    payload=output.getvalue()
+    if len(payload)>8_000_000:return self.encode({"error":"התמונה גדולה מדי לאחר עיבוד"})
+   self.attachments.append({"name":name,"image_bytes":payload})
+   return self.encode({"name":name,"characters":0,"image":True,"pending":len(self.attachments)})
+  except Exception as exc:
+   return self.encode({"error":"טעינת תמונה נכשלה: "+str(exc)[:160]})
+ @Slot(str,str,result=str)
+ def attach_image_base64(self,name,data):
+  if self.busy:return self.encode({"error":"המתן לסיום הבקשה"})
+  try:
+   import base64
+   if not isinstance(data,str) or len(data)>7_000_000:
+    return self.encode({"error":"קובץ גדול מדי"})
+   raw=base64.b64decode(data,validate=True)
+   return self._append_image(name,raw)
+  except (ValueError,TypeError) as exc:return self.encode({"error":str(exc)})
  @Slot(str,result=str)
  def add_attachment_path(self,path):
   file=Path(path)
   if not file.is_file() or file.stat().st_size>5_000_000:
    return self.encode({"error":"אפשר לצרף קובץ עד 5MB בלבד"})
   if file.suffix.lower() in {".png",".jpg",".jpeg"}:
-   if len([x for x in self.attachments if "image_bytes" in x])>=4:
-    return self.encode({"error":"עד 4 תמונות לכל הודעה"})
-   try:
-    import io
-    from PIL import Image,ImageOps
-    with Image.open(file) as image:
-     if image.width*image.height>24_000_000:
-      return self.encode({"error":"התמונה גדולה מדי"})
-     converted=ImageOps.exif_transpose(image)
-     converted.thumbnail((1920,1920))
-     output=io.BytesIO()
-     converted.convert("RGB").save(output,format="PNG")
-     payload=output.getvalue()
-     if len(payload)>8_000_000:return self.encode({"error":"התמונה גדולה מדי לאחר עיבוד"})
-    self.attachments.append({"name":file.name,"image_bytes":payload})
-    return self.encode({"name":file.name,"characters":0,"image":True,"pending":len(self.attachments)})
-   except Exception as exc:
-    return self.encode({"error":"טעינת תמונה נכשלה: "+str(exc)[:160]})
+   return self._append_image(file.name,file.read_bytes())
   allowed={".txt",".md",".csv",".json",".py",".pdf",".docx"}
   if file.suffix.lower() not in allowed:
    return self.encode({"error":"פורמט זה אינו נתמך עדיין לקריאת תוכן"})
