@@ -22,8 +22,9 @@ class UIContract(unittest.TestCase):
   self.assertIn('aria-label="הודעה"',self.html)
   self.assertIn('aria-label="שלח"',self.html)
  def test_dom_targets_exist(self):
+  dynamic=set(re.findall(r"\.id\s*=\s*[\\\'\\\"]([A-Za-z][\\w-]*)[\\\'\\\"]",self.html))
   for element in set(re.findall(r"\$\('([a-zA-Z][\w-]*)'\)",self.html)):
-   with self.subTest(id=element):self.assertIn(element,self.parser.ids)
+   with self.subTest(id=element):self.assertIn(element,set(self.parser.ids)|dynamic)
  def test_webchannel_methods_exist(self):
   methods=set(re.findall(r"call\('([a-z_]+)'",self.html))
   decorators=set(re.findall(r"@Slot\([^\n]*?result=str\)\s+def ([a-z_]+)\(",self.shell))
@@ -61,7 +62,8 @@ class UIContract(unittest.TestCase):
   self.assertIn('registerObject("api",self.bridge)',self.shell)
   self.assertIn("bridge.event.connect(",self.html)
  def test_secure_html_messages(self):
-  self.assertIn("document.createTextNode(text)",self.html)
+  self.assertIn("renderMarkdown(content,text)",self.html)
+  self.assertIn("p.textContent=line.replace",self.html)
   self.assertNotIn("innerHTML=",self.html)
  def test_source_python_syntax(self):
   for path in ROOT.glob("*.py"):
