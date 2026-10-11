@@ -54,7 +54,7 @@ async function loadChats(){const data=await call('chats');const box=$('chats');b
 function showChat(data){$('thread').replaceChildren();if(data.messages.length){for(const m of data.messages)addMessage(m.role,m.content)}else{const h=document.createElement('div');h.className='welcome';h.textContent='איך אפשר לעזור היום?';$('thread').append(h)}loadChats()}
 function modal(title){$('modalTitle').textContent=title;$('modalBody').replaceChildren();if(!$('modal').open)$('modal').showModal();return $('modalBody')}
 function element(tag,text,parent){const e=document.createElement(tag);e.textContent=text;parent.append(e);return e}
-async function proposals(){const data=await call('proposals');const body=modal('הצעות לשיפור הסוכן');if(!data.items.length)element('p','אין כרגע הצעות.',body);for(const p of data.items){element('h3',p.description+' ('+p.status+')',body);element('pre',p.steps,body);if(p.status==='pending'){for(const [s,title] of [['approved','סמן כנבדק'],['rejected','דחה']]){const b=element('button',title,body);b.onclick=()=>call('review_proposal',p.id,s).then(proposals)}}if(p.status==='approved'){const b=element('button','נסה ליצור הרחבה מושבתת',body);b.onclick=()=>call('install_proposal',p.id).then(()=>extensions()).catch(e=>notify(e.message,'error'))}}}
+async function proposals(){const data=await call('proposals');const body=modal('הצעות לשיפור הסוכן');if(!data.items.length)element('p','אין כרגע הצעות.',body);for(const p of data.items){element('h3',p.description+' ('+p.status+')',body);element('pre',p.steps,body);if(p.status==='pending'){for(const [s,title] of [['approved','סמן כנבדק'],['rejected','דחה']]){const b=element('button',title,body);b.onclick=()=>call('review_proposal',p.id,s).then(proposals)}}if(p.status==='approved'){const b=element('button','בנה הרחבה מההצעה',body);b.onclick=()=>call('build_extension',p.id,$('models').value).then(()=>notify('מכין הרחבה לבדיקה…')).catch(e=>notify(e.message,'error'))}}}
 async function extensions(){const data=await call('extensions');const body=modal('מערכת הרחבות');element('p','הרחבות הן רצפים מוגבלים של כלים קיימים. הן אינן מריצות קוד חיצוני.',body);for(const x of data.items){const p=element('div',x.name+' — '+x.status+' · '+x.steps.length+' צעדים',body);p.style.padding='8px';const enable=element('button',x.status==='enabled'?'השבת':'הפעל',body);enable.onclick=()=>call('toggle_extension',x.id,x.status!=='enabled').then(extensions);if(x.status==='enabled'){const run=element('button','הרץ באישור',body);run.onclick=()=>call('run_extension',x.id).then(v=>notify(v.message,'success')).catch(e=>notify(e.message,'error'))}}element('h3','הוסף הרחבה (JSON מאומת)',body);const input=document.createElement('textarea');input.style.border='1px solid #ccc';input.style.height='130px';input.placeholder='{"name":"בדיקת חלונות","steps":[{"tool":"windows_snapshot","arguments":{}}]}';body.append(input);const install=element('button','בדוק והוסף מושבתת',body);install.onclick=()=>call('install_extension',input.value).then(extensions).catch(e=>notify(e.message,'error'))}
 $('close').onclick=()=>$('modal').close();
 $('new').onclick=()=>call('new_chat').then(showChat).catch(e=>status(e.message));
@@ -81,5 +81,19 @@ try{
   working=false;$('send').disabled=false;
 }}
 function updateModels(models){const select=$('models');select.replaceChildren();for(const m of models){const o=document.createElement('option');o.value=m[0];o.textContent=m[1];select.append(o)}}
-if(!window.qt||!qt.webChannelTransport){status('גשר Windows אינו זמין. בדוק את התקנת Qt WebEngine.')}else new QWebChannel(qt.webChannelTransport,channel=>{bridge=channel.objects.api;bridge.event.connect(raw=>{const msg=JSON.parse(raw);if(msg.type==='approval'){askConfirm(msg.description).then(ok=>call('approval_reply',ok).catch(e=>notify(e.message,'error')))}if(msg.type==='message')addMessage(msg.role,msg.text);if(msg.type==='models'){updateModels(msg.models);status(msg.status)}if(msg.type==='status')status(msg.text);if(msg.type==='finished'){working=false;$('send').disabled=false;loadChats()}});call('session').then(d=>{updateModels(d.models);status(d.status)});call('chats').then(d=>call('select_chat',d.active).then(showChat));});
+if(!window.qt||!qt.webChannelTransport){status('גשר Windows אינו זמין. בדוק את התקנת Qt WebEngine.')}else new QWebChannel(qt.webChannelTransport,channel=>{bridge=channel.objects.api;bridge.event.connect(raw=>{const msg=JSON.parse(raw);if(msg.type==='extension_draft'){
+ if(msg.error){notify(msg.error,'error');}
+ else if(msg.manifest){
+  const preview=JSON.stringify(msg.manifest,null,2);
+  const panel=modal('הרחבה מוכנה לבדיקה');
+  element('p','בדוק את רצף הכלים. ההרחבה תותקן כמושבתת ולא תופעל אוטומטית.',panel);
+  element('pre',preview,panel);
+  const install=element('button','התקן הרחבה מושבתת',panel);
+  install.className='primary-action';
+  install.onclick=async()=>{if(await askConfirm('להתקין את ההרחבה במצב מושבת, בלי להריץ אותה?')){
+    try{await call('install_extension',JSON.stringify(msg.manifest));notify('ההרחבה הותקנה כמושבתת','success');extensions()}
+    catch(e){notify(e.message,'error')}
+  }};
+ }
+}if(msg.type==='approval'){askConfirm(msg.description).then(ok=>call('approval_reply',ok).catch(e=>notify(e.message,'error')))}if(msg.type==='message')addMessage(msg.role,msg.text);if(msg.type==='models'){updateModels(msg.models);status(msg.status)}if(msg.type==='status')status(msg.text);if(msg.type==='finished'){working=false;$('send').disabled=false;loadChats()}});call('session').then(d=>{updateModels(d.models);status(d.status)});call('chats').then(d=>call('select_chat',d.active).then(showChat));});
 </script></body></html>
