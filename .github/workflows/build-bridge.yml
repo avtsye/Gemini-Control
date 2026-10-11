@@ -16,13 +16,14 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          Add-Type -Path "windows-bridge/BridgeHost.cs" -OutputAssembly "windows-bridge/GeminiControlBridge.exe" -OutputType ConsoleApplication -ReferencedAssemblies @("System.Web.Extensions.dll","System.Drawing.dll","System.Windows.Forms.dll")
+          Add-Type -Path @("windows-bridge/BridgeHost.cs","windows-bridge/AccessibleWindows.cs") -OutputAssembly "windows-bridge/GeminiControlBridge.exe" -OutputType ConsoleApplication -ReferencedAssemblies @("System.Web.Extensions.dll","System.Drawing.dll","System.Windows.Forms.dll","UIAutomationClient.dll","UIAutomationTypes.dll")
           if (!(Test-Path "windows-bridge/GeminiControlBridge.exe")) { throw "Build output missing" }
       - uses: actions/upload-artifact@v4
         with:
           name: GeminiControlBridge-Windows
           path: |
             windows-bridge/BridgeHost.cs
+            windows-bridge/AccessibleWindows.cs
             windows-bridge/GeminiControlBridge.exe
             windows-bridge/Install-Bridge.ps1
             windows-bridge/SETUP.cmd
