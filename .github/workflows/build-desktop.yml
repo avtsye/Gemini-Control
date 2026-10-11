@@ -23,6 +23,7 @@ jobs:
           node --check desktop/website_bridge.js
           python desktop/tests/test_agent.py -v
           python desktop/tests/test_openai_signin.py -v
+          python desktop/tests/test_openai_agent.py -v
   build:
     needs: test
     runs-on: windows-latest
