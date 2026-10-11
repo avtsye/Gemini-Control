@@ -17,6 +17,9 @@ on:
       - 'desktop/ocr_tools.py'
       - 'desktop/speech_tools.py'
       - 'desktop/tests/test_speech_tools.py'
+      - 'desktop/file_organizer.py'
+      - 'desktop/tests/test_file_organizer.py'
+      - 'desktop/tests/test_agent_tool_creation.py'
       - 'desktop/capabilities_catalog.py'
       - 'desktop/tests/test_capabilities_catalog.py'
       - 'desktop/media_tools.py'
@@ -49,6 +52,10 @@ jobs:
         run: python desktop/tests/test_workspace_archives.py -v
       - name: Install document libraries
         run: python -m pip install openpyxl python-pptx
+      - name: Test native file organizer
+        run: python desktop/tests/test_file_organizer.py -v
+      - name: Test agent capability drafting
+        run: python desktop/tests/test_agent_tool_creation.py -v
       - name: Test optional speech tools
         run: python desktop/tests/test_speech_tools.py -v
       - name: Test coverage and optional OCR
