@@ -24,3 +24,11 @@ $('ask').onclick=async()=>{if(!chosen)return;const instruction=$('instruction').
 $('reject').onclick=()=>{clearPlan();msg('ההצעה בוטלה')};
 $('apply').onclick=async()=>{if(!proposal||!chosen)return;try{if(chosen.name!==proposal.name||$('editor').value!==proposal.original)throw Error('הקובץ השתנה מאז יצירת ההצעה. בקש הצעה מחדש');if(!confirm('לשמור את השינוי המוצע? העותק הקודם יישמר בגיבוי.'))return;await saveText(proposal.content)}catch(e){msg(e.message)}};
 buttons();
+/* One-time instruction handoff from the Gemini page.  No file access occurs
+   until the user chooses a directory and file in this extension page. */
+chrome.storage.session.get('geminiPendingRequest').then(async ({geminiPendingRequest})=>{
+  if(typeof geminiPendingRequest!=='string'||!geminiPendingRequest)return;
+  $('instruction').value=geminiPendingRequest;
+  msg('התקבלה בקשה מדף Gemini. בחר תיקייה וקובץ, בדוק את ההוראה ולחץ על "צור הצעת שינוי".');
+  await chrome.storage.session.remove('geminiPendingRequest');
+}).catch(e=>msg('שגיאה בקריאת הבקשה: '+String(e.message||e)));
