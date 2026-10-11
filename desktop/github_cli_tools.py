@@ -11,7 +11,7 @@ def github_engine():
 def _repo(value):
     if not isinstance(value,str) or not re.fullmatch(r"[A-Za-z0-9_.-]{1,70}/[A-Za-z0-9_.-]{1,100}",value):
         raise ValueError("Expected owner/repository")
-    if ".." in value:return ValueError("Invalid owner/repository")
+    if ".." in value:raise ValueError("Invalid owner/repository")
     return value
 
 def _call(args):
