@@ -39,7 +39,7 @@ def index_workspace(workspace,approve):
 def search_knowledge(workspace,query,approve,limit=10):
     if not isinstance(query,str) or not query.strip() or len(query)>200:
         raise ValueError("Invalid search query")
-    words=re.findall(r"[^\\W_]+",query,flags=re.UNICODE)[:10]
+    words=re.findall(r"[^\W_]+",query,flags=re.UNICODE)[:10]
     if not words:return {"results":[]}
     if not approve("לחפש באינדקס הידע המקומי ולשתף קטעי מסמכים עם המודל?"):
         return {"cancelled":True}
