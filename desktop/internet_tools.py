@@ -50,3 +50,37 @@ def fetch_page(url,approve):
             return {"url":checked,"text":text[:18000],"truncated":len(text)>18000}
     except requests.RequestException as error:
         return {"error":"HTTPS request failed","details":str(error)[:250]}
+
+DOWNLOAD_EXT={".pdf",".txt",".csv",".json",".png",".jpg",".jpeg",".zip",".md",".webp"}
+MAX_DOWNLOAD=30_000_000
+
+def download_file(workspace,url,destination,approve):
+    checked=_validate_url(url)
+    path=safe_path(workspace,destination)
+    if path.suffix.lower() not in DOWNLOAD_EXT:
+        raise ValueError("This file type is not approved for downloads")
+    if path.exists() or path.is_symlink():raise FileExistsError("Destination exists")
+    if not approve("להוריד קובץ ציבורי מאתר "+urlparse(checked).hostname+
+                   " לתיקיית העבודה בשם "+str(destination)+"?"):
+        return {"cancelled":True}
+    import requests
+    temp=path.with_name(path.name+".partial")
+    if temp.exists():raise FileExistsError("Partial file already exists")
+    try:
+        with requests.get(checked,timeout=(6,30),stream=True,allow_redirects=False,
+                          headers={"User-Agent":"GeminiControlDesktop/1.0"}) as response:
+            if 300<=response.status_code<400:return {"error":"Redirects require a new explicit request"}
+            response.raise_for_status()
+            path.parent.mkdir(parents=True,exist_ok=True)
+            count=0
+            with temp.open("xb") as out:
+                for chunk in response.iter_content(chunk_size=32768):
+                    count+=len(chunk)
+                    if count>MAX_DOWNLOAD:raise ValueError("Download exceeds 30 MB")
+                    out.write(chunk)
+        temp.replace(path)
+        return {"downloaded":str(destination),"bytes":count}
+    except requests.RequestException as error:
+        return {"error":"Download failed","details":str(error)[:250]}
+    finally:
+        temp.unlink(missing_ok=True)
