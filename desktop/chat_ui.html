@@ -35,7 +35,7 @@ body.theme-dark{color-scheme:dark;--bg:#171b22;--sidebar:#1f2630;--text:#e6eaf0;
 .activity-entry{padding:8px;border-bottom:1px solid var(--border);line-height:1.6}
 .builtin-card{padding:12px;margin:8px 0;border:1px solid var(--border);border-radius:12px}.builtin-card p{margin:5px 0;color:var(--muted)}.builtin-card button{border:1px solid var(--border)}
 </style></head><body><div class="shell">
-<aside class="side"><div class="brand">AI Control</div><button class="item" id="new">＋ שיחה חדשה</button><div class="section">השיחות שלך</div><input id="chatSearch" placeholder="חיפוש בכל השיחות..." aria-label="חיפוש בשיחות"><button class="item" id="backupChats">↓ גיבוי שיחות ל־JSON</button><button class="item" id="restoreChats">↑ שחזור שיחות מגיבוי</button><div id="chats"></div><div class="side-actions"><button class="item" id="toolsCatalog">☷ כלים זמינים לסוכן</button><button class="item" id="toolSecurity">♧ הרשאות כלים</button><button class="item" id="health">♡ אבחון מערכת</button><button class="item" id="reminders">◷ תזכורות מתוזמנות</button><button class="item" id="capabilities">✦ סדנת יכולות חדשות</button><button class="item" id="extensions">◈ הרחבות</button><button class="item" id="proposals">◇ הצעות לשיפור</button><button class="item" id="delete">⌫ מחק שיחה</button></div></aside>
+<aside class="side"><div class="brand">AI Control</div><button class="item" id="new">＋ שיחה חדשה</button><div class="section">השיחות שלך</div><input id="chatSearch" placeholder="חיפוש בכל השיחות..." aria-label="חיפוש בשיחות"><button class="item" id="backupChats">↓ גיבוי שיחות ל־JSON</button><button class="item" id="restoreChats">↑ שחזור שיחות מגיבוי</button><div id="chats"></div><div class="side-actions"><button class="item" id="toolsCatalog">☷ כלים זמינים לסוכן</button><button class="item" id="toolSecurity">♧ הרשאות כלים</button><button class="item" id="health">♡ אבחון מערכת</button><button class="item" id="reminders">◷ תזכורות מתוזמנות</button><button class="item" id="agentSchedules">◴ משימות סוכן מתוזמנות</button><button class="item" id="capabilities">✦ סדנת יכולות חדשות</button><button class="item" id="extensions">◈ הרחבות</button><button class="item" id="proposals">◇ הצעות לשיפור</button><button class="item" id="delete">⌫ מחק שיחה</button></div></aside>
 <main class="main"><div class="toolbar"><span class="name">AI Control Desktop</span><button class="pill" id="uiPrefs">⚙ מראה</button><button class="pill" id="account">החשבון שלי</button><button class="pill" id="login">התחבר ל־ChatGPT</button><select id="models" aria-label="מודל"></select><button class="pill" id="compareModels">⇄ השווה מודלים</button><button class="pill" id="parallelAnalysis">◈ צוות ניתוח</button><button class="pill" id="agentActivity">☷ פעילות הסוכן</button><button class="pill" id="stop">עצור סוכן</button><span id="state">לא מחובר</span></div>
 <div class="messages" id="scroll"><div class="thread" id="thread"><div class="welcome">איך אפשר לעזור היום?</div></div></div>
 <div class="composer-wrap"><div id="activity" class="activity"><span class="activity-dot"></span><span id="activityText">מוכן לשיחה</span></div><div class="composer"><div id="fileChips" class="file-chips"></div><textarea id="prompt" placeholder="שלח הודעה או בקש לבצע פעולה במחשב…" aria-label="הודעה"></textarea><div class="compose-actions"><button class="small-action" id="voiceRecord" title="הקלטה מקומית במיקרופון">🎙 הקלט</button><button class="small-action" id="attach" title="צרף מסמך" aria-label="צרף מסמך">📎 צרף קובץ</button><label class="toggle"><input type="checkbox" id="agent" checked> מצב סוכן מחשב</label><button class="send" id="send" aria-label="שלח">↑</button></div></div></div></main><aside id="artifactPanel" class="artifact-panel" hidden><div class="artifact-heading"><strong id="artifactTitle">תצוגת תוצר</strong><button id="closeArtifact" aria-label="סגור תצוגה">×</button></div><div id="artifactContent"></div></aside></div>
@@ -462,6 +462,32 @@ $('voiceRecord').onclick=async()=>{
   micRecording=false;$('voiceRecord').textContent='🎙 הקלט';
   notify(error.message,'error');
  }
+};
+$('agentSchedules').onclick=async()=>{
+ try{
+  const data=await call('list_agent_schedules');
+  const body=modal('משימות סוכן מתוזמנות');
+  element('p','המשימות נבדקות כל חצי דקה כשהיישום פתוח ומחובר. כל הפעלה מחייבת אישור.',body);
+  for(const task of data.items){
+   const panel=element('div','',body);panel.className='builtin-card';
+   element('p',task.prompt,panel);
+   element('p','מודל: '+task.model+' · חזרה: '+(task.repeat_minutes?task.repeat_minutes+' דקות':'חד־פעמי'),panel);
+   const cancel=element('button','בטל משימה',panel);
+   cancel.onclick=async()=>{try{await call('cancel_agent_schedule',task.id);$('agentSchedules').click()}catch(error){notify(error.message,'error')}};
+  }
+  element('h3','צור משימה חדשה',body);
+  const prompt=document.createElement('textarea');prompt.placeholder='מה הסוכן צריך לבצע?';body.append(prompt);
+  const delay=document.createElement('input');delay.type='number';delay.min='1';delay.max='525600';delay.value='60';delay.placeholder='בעוד כמה דקות';body.append(delay);
+  element('p','מספר דקות עד ההפעלה הראשונה',body);
+  const repeat=document.createElement('input');repeat.type='number';repeat.min='0';repeat.max='525600';repeat.value='0';body.append(repeat);
+  element('p','חזרה בדקות (0 = חד־פעמי; לחזרה דרושות 15 דקות לפחות)',body);
+  const add=element('button','שמור משימה מתוזמנת',body);add.className='primary-action';
+  add.onclick=async()=>{try{
+   if(!$('models').value)throw Error('בחר מודל תחילה');
+   await call('schedule_agent_task',prompt.value,$('models').value,Number(delay.value),Number(repeat.value));
+   notify('המשימה המתוזמנת נשמרה','success');$('agentSchedules').click();
+  }catch(error){notify(error.message,'error')}};
+ }catch(error){notify(error.message,'error')}
 };
 $('compareModels').onclick=()=>{
  const options=Array.from($('models').options);
