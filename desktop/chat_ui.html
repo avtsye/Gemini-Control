@@ -187,7 +187,9 @@ $('capabilities').onclick=()=>capabilityWorkshop().catch(e=>notify(e.message,'er
 $('proposals').onclick=()=>proposals().catch(e=>notify(e.message,'error'));
 $('login').onclick=()=>{activity('פותח התחברות…',true);call('login').catch(e=>{status(e.message);activity('התחברות נכשלה')})};
 $('account').onclick=async()=>{try{const a=await call('account_details');const body=modal('החשבון והנתונים שלי');element('p',a.connected?'מחובר ל־ChatGPT':'לא מחובר',body);element('p','כתובת חשבון: '+a.email,body);element('p','מספר מודלים זמינים: '+a.model_count,body);element('p','מודלים: '+(a.models.join(', ')||'לא זמין'),body);element('p','נתוני שימוש: '+a.usage,body);element('p','מסד השיחות: '+a.history_path,body);element('p','יכולות מותקנות: '+a.capability_count,body)}catch(e){notify(e.message,'error')}};
-$('attach').onclick=async()=>{activity('בוחר ומעבד קובץ…',true);try{const a=await call('pick_attachment');if(a.cancelled){activity('מוכן לשיחה');return}const chip=element('span','📄 '+a.name+' · '+a.characters+' תווים',$('fileChips'));chip.className='file-chip';activity('קובץ מוכן לשליחה · המידע לא הועבר עדיין למודל');}catch(e){notify(e.message,'error');activity('קריאת הקובץ נכשלה')}};
+$('attach').onclick=async()=>{activity('בוחר ומעבד קובץ…',true);try{const a=await call('pick_attachment');if(a.cancelled){activity('מוכן לשיחה');return}
+for(const file of (a.items||[])){const chip=element('span','📄 '+file.name+' · '+file.characters+' תווים',$('fileChips'));chip.className='file-chip';chip.title='תוכן הקובץ ייכלל בהודעה לאחר השליחה';}
+activity((a.items||[]).length+' קבצים צורפו · המידע לא הועבר עדיין למודל');}catch(e){notify(e.message,'error');activity('קריאת הקובץ נכשלה')}};
 
 $('stop').onclick=()=>call('toggle_agent').then(x=>status(x.message));
 $('send').onclick=send;
