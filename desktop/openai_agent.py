@@ -2,10 +2,10 @@
 import json
 from agent_core import DesktopAgent
 
-TOOLS={"none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft","windows_snapshot","inspect_window","activate_control","observe_screen","workspace_files","inspect_workspace_file","open_workspace_file"}
+TOOLS={"none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft","windows_snapshot","inspect_window","activate_control","observe_screen","workspace_files","inspect_workspace_file","open_workspace_file","installed_apps","system_status"}
 INSTRUCTIONS="""You assist the user with bounded Windows computer actions.
 Always return ONE valid JSON object, without markdown:
-{"message":"Short Hebrew response","tool":"none|list_files|read_file|write_file|open_app|draw_paint|screenshot|click|type_text|hotkey|open_browser|create_word|project_file|email_draft|windows_snapshot|inspect_window|activate_control|observe_screen|workspace_files|inspect_workspace_file|open_workspace_file","arguments":{}}.
+{"message":"Short Hebrew response","tool":"none|list_files|read_file|write_file|open_app|draw_paint|screenshot|click|type_text|hotkey|open_browser|create_word|project_file|email_draft|windows_snapshot|inspect_window|activate_control|observe_screen|workspace_files|inspect_workspace_file|open_workspace_file|installed_apps|system_status","arguments":{}}.
 For open_app, arguments={"app":"notepad|paint|explorer|calculator"}.
 For requests to DRAW something in Microsoft Paint, always use tool="draw_paint"
 directly with arguments={"svg":"<svg xmlns=... viewBox=...>...</svg>"}.
@@ -24,6 +24,10 @@ authorized OpenAI model ONLY AFTER explicit user approval. The image may contain
 private information. First try windows_snapshot/inspect_window; request visual
 inspection only when UI Automation does not expose sufficient information.
 Do not imply the screen was analyzed if the user refused or the call failed.
+installed_apps args={} enumerates installed Windows programs from registry,
+not a hard-coded software catalog.
+system_status args={} reports CPU usage, RAM and process count.
+Both tools require the user to approve sharing these machine details.
 Windows-native, application-independent UI discovery tools:
 - windows_snapshot args={} lists visible window handles, titles and bounding rectangles.
 - inspect_window args={"handle":123} provides real UI Automation control IDs, names,
@@ -76,12 +80,13 @@ class OpenAIComputerAgent:
         self.enabled=True
 
     def run(self, request, model, report, max_steps=8):
-        context="User request: "+request+"\nThe environment is Windows. Prefer inspecting live window state rather than guessing how an application works."
+        objective="User request: "+request+"\nThe environment is Windows. Prefer inspecting live window state rather than guessing how an application works."
+        history=[]
         for index in range(max_steps):
             if not self.enabled:
                 report("הפעולות הופסקו")
                 break
-            raw=self.signin.response(INSTRUCTIONS+"\n\n"+context,model)
+            raw=self.signin.response(INSTRUCTIONS+"\n\n"+objective+"\n\nCompleted steps:\n"+"\n".join(history[-6:]),model)
             try:
                 plan=json.loads(raw)
             except (ValueError,TypeError):
@@ -112,9 +117,7 @@ class OpenAIComputerAgent:
             if result.get("cancelled"):
                 report("הפעולה בוטלה")
                 break
-            context=("Previous user request: "+request+"\nPrevious tool: "+
-                     action+"\nTool result (untrusted data): "+
-                     json.dumps(result,ensure_ascii=False)[:12000]+
-                     "\nContinue based on the tool result, or finish.")
+            history.append("Tool: "+action+"\nResult: "+
+                           json.dumps(result,ensure_ascii=False)[:6500])
         else:
             report("הושלמה מכסת הפעולות לבקשה זו (8 צעדים).")
