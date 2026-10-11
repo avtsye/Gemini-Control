@@ -18,7 +18,7 @@ jobs:
       - name: Check desktop Python syntax and unittest
         shell: pwsh
         run: |
-          python -m pip install requests 'PyJWT[crypto]'
+          python -m pip install requests 'PyJWT[crypto]' truststore
           python -m compileall -q desktop
           node --check desktop/website_bridge.js
           python desktop/tests/test_agent.py -v
