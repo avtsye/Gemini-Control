@@ -109,6 +109,34 @@ class Bridge(QObject):
   except (OSError,RuntimeError) as exc:
    return self.encode({"error":"שמירת ההקלטה נכשלה: "+str(exc)[:240]})
 
+ @Slot(str,str,result=str)
+ def transcribe_voice_recording(self,source,model_folder):
+  if self.busy:return self.encode({"error":"משימה אחרת פעילה"})
+  if not isinstance(source,str) or not source.startswith("recordings/") or not source.endswith(".wav"):
+   return self.encode({"error":"ניתן לתמלל רק הקלטה שנוצרה באפליקציה"})
+  if not isinstance(model_folder,str) or not model_folder or len(model_folder)>200:
+   return self.encode({"error":"הזן תיקיית מודל מקומי תקינה"})
+  self.busy=True
+  def worker():
+   try:
+    import uuid
+    from speech_tools import transcribe_local
+    from workspace_data import safe_path
+    target="recordings/transcript-"+uuid.uuid4().hex+".txt"
+    result=transcribe_local(self.agent.local.workspace,source,model_folder,target,self.approve)
+    if "created_transcript" in result:
+     file=safe_path(self.agent.local.workspace,target)
+     transcript=file.read_text(encoding="utf-8")[:25000]
+     self.emit("voice_transcript",text=transcript,source=source)
+    else:
+     self.events.message.emit("system_note","תמלול הקול: "+
+         str(result.get("unavailable") or result.get("error") or "הפעולה בוטלה")[:320])
+   except Exception as exc:
+    self.events.message.emit("system_note","תמלול הקול נכשל: "+str(exc)[:320])
+   finally:self.events.finished.emit()
+  threading.Thread(target=worker,daemon=True).start()
+  return self.encode({"started":True})
+
  @Slot(result=str)
  def session(self):
   return self.encode({"models":self.available_models,
