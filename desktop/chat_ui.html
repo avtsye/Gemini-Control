@@ -48,7 +48,21 @@ $('login').onclick=()=>call('login').catch(e=>status(e.message));
 $('stop').onclick=()=>call('toggle_agent').then(x=>status(x.message));
 $('send').onclick=send;
 $('prompt').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}};
-async function send(){if(working)return;const text=$('prompt').value.trim();if(!text)return;working=true;$('send').disabled=true;$('prompt').value='';addMessage('user',text);try{await call('send',text,$('models').value,$('agent').checked);status('הסוכן עובד…')}catch(e){status(e.message);working=false;$('send').disabled=false}}
+async function send(){
+if(working)return;
+const text=$('prompt').value.trim();
+if(!text)return;
+if(!$('models').value){status('יש להתחבר ולבחור מודל לפני השליחה');return}
+working=true;$('send').disabled=true;
+try{
+  await call('send',text,$('models').value,$('agent').checked);
+  $('prompt').value='';
+  addMessage('user',text);
+  status('הסוכן עובד…');
+}catch(e){
+  status('שליחה נכשלה: '+e.message);
+  working=false;$('send').disabled=false;
+}}
 function updateModels(models){const select=$('models');select.replaceChildren();for(const m of models){const o=document.createElement('option');o.value=m[0];o.textContent=m[1];select.append(o)}}
-new QWebChannel(qt.webChannelTransport,channel=>{bridge=channel.objects.api;bridge.event.connect(raw=>{const msg=JSON.parse(raw);if(msg.type==='message')addMessage(msg.role,msg.text);if(msg.type==='models'){updateModels(msg.models);status(msg.status)}if(msg.type==='status')status(msg.text);if(msg.type==='finished'){working=false;$('send').disabled=false;loadChats()}});call('session').then(d=>{updateModels(d.models);status(d.status)});call('chats').then(d=>call('select_chat',d.active).then(showChat));});
+if(!window.qt||!qt.webChannelTransport){status('גשר Windows אינו זמין. בדוק את התקנת Qt WebEngine.')}else new QWebChannel(qt.webChannelTransport,channel=>{bridge=channel.objects.api;bridge.event.connect(raw=>{const msg=JSON.parse(raw);if(msg.type==='message')addMessage(msg.role,msg.text);if(msg.type==='models'){updateModels(msg.models);status(msg.status)}if(msg.type==='status')status(msg.text);if(msg.type==='finished'){working=false;$('send').disabled=false;loadChats()}});call('session').then(d=>{updateModels(d.models);status(d.status)});call('chats').then(d=>call('select_chat',d.active).then(showChat));});
 </script></body></html>
