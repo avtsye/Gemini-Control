@@ -1,5 +1,5 @@
 """Offline structural QA checks. Run: python desktop/tests/test_ui_contract.py -v"""
-import ast,pathlib,re,unittest
+import ast,pathlib,re,unittest,subprocess,shutil
 from html.parser import HTMLParser
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
@@ -75,6 +75,17 @@ class UIContract(unittest.TestCase):
   self.assertIn("document.createTextNode(",self.html)
   self.assertIn("noopener noreferrer",self.html)
   self.assertNotIn("innerHTML=",self.html)
+ def test_inline_javascript_syntax(self):
+  executable=shutil.which("node")
+  if not executable:self.skipTest("Node.js is not installed")
+  blocks=re.findall(r"<script(?:\\s[^>]*)?>([\\s\\S]*?)</script>",self.html)
+  scripts=[b for b in blocks if b.strip()]
+  self.assertTrue(scripts,"Expected inline application script")
+  for source in scripts:
+   result=subprocess.run([executable,"--check"],input=source,
+                         capture_output=True,text=True,encoding="utf-8",
+                         errors="replace",timeout=15)
+   self.assertEqual(result.returncode,0,result.stderr[-1200:])
  def test_source_python_syntax(self):
   for path in ROOT.glob("*.py"):
    with self.subTest(path=path.name):ast.parse(path.read_text(encoding="utf-8"),filename=str(path))
