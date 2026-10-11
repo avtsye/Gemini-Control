@@ -36,6 +36,11 @@ class DesktopAgent:
             if tool == "create_zip":
                 return create_zip(self.workspace,args.get("sources"),args.get("target"),self.approval)
             return extract_zip(self.workspace,args.get("archive"),args.get("destination"),self.approval)
+        if tool in {"inspect_python_project","run_python_tests"}:
+            from project_quality import inspect_python_project,run_python_tests
+            if tool=="inspect_python_project":
+                return inspect_python_project(self.workspace,args.get("project"),self.approval)
+            return run_python_tests(self.workspace,args.get("project"),self.approval)
         if tool=="fetch_page":
             from internet_tools import fetch_page
             return fetch_page(args.get("url"),self.approval)
