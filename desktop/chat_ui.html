@@ -28,7 +28,7 @@ dialog{border:1px solid var(--border);border-radius:17px;width:min(710px,92vw);m
 body.theme-dark{color-scheme:dark;--bg:#171b22;--sidebar:#1f2630;--text:#e6eaf0;--muted:#a0aab7;--border:#344154;--hover:#2c3544;--accent:#8cbaff}body.theme-dark .composer,body.theme-dark select{background:#222b37;color:var(--text)}body.theme-dark .msg,body.theme-dark dialog{background:var(--bg);color:var(--text)}body.theme-dark pre{background:#283442;color:#e7ecf6}body.theme-dark .item.active{background:#34455b}body.theme-dark .pill,body.theme-dark .small-action{border-color:var(--border)}
 </style></head><body><div class="shell">
 <aside class="side"><div class="brand">AI Control</div><button class="item" id="new">＋ שיחה חדשה</button><div class="section">השיחות שלך</div><input id="chatSearch" placeholder="חיפוש בכל השיחות..." aria-label="חיפוש בשיחות"><button class="item" id="backupChats">↓ גיבוי שיחות ל־JSON</button><div id="chats"></div><div class="side-actions"><button class="item" id="toolsCatalog">☷ כלים זמינים לסוכן</button><button class="item" id="capabilities">✦ סדנת יכולות חדשות</button><button class="item" id="extensions">◈ הרחבות</button><button class="item" id="proposals">◇ הצעות לשיפור</button><button class="item" id="delete">⌫ מחק שיחה</button></div></aside>
-<main class="main"><div class="toolbar"><span class="name">AI Control Desktop</span><button class="pill" id="uiPrefs">⚙ מראה</button><button class="pill" id="account">החשבון שלי</button><button class="pill" id="login">התחבר ל־ChatGPT</button><select id="models" aria-label="מודל"></select><button class="pill" id="stop">עצור סוכן</button><span id="state">לא מחובר</span></div>
+<main class="main"><div class="toolbar"><span class="name">AI Control Desktop</span><button class="pill" id="uiPrefs">⚙ מראה</button><button class="pill" id="account">החשבון שלי</button><button class="pill" id="login">התחבר ל־ChatGPT</button><select id="models" aria-label="מודל"></select><button class="pill" id="compareModels">⇄ השווה מודלים</button><button class="pill" id="stop">עצור סוכן</button><span id="state">לא מחובר</span></div>
 <div class="messages" id="scroll"><div class="thread" id="thread"><div class="welcome">איך אפשר לעזור היום?</div></div></div>
 <div class="composer-wrap"><div id="activity" class="activity"><span class="activity-dot"></span><span id="activityText">מוכן לשיחה</span></div><div class="composer"><div id="fileChips" class="file-chips"></div><textarea id="prompt" placeholder="שלח הודעה או בקש לבצע פעולה במחשב…" aria-label="הודעה"></textarea><div class="compose-actions"><button class="small-action" id="attach" title="צרף מסמך" aria-label="צרף מסמך">📎 צרף קובץ</button><label class="toggle"><input type="checkbox" id="agent" checked> מצב סוכן מחשב</label><button class="send" id="send" aria-label="שלח">↑</button></div></div></div></main><aside id="artifactPanel" class="artifact-panel" hidden><div class="artifact-heading"><strong id="artifactTitle">תצוגת תוצר</strong><button id="closeArtifact" aria-label="סגור תצוגה">×</button></div><div id="artifactContent"></div></aside></div>
 <div id="toastArea" class="toast-area" role="status" aria-live="polite"></div><dialog id="confirmDialog" aria-labelledby="confirmTitle"><h2 id="confirmTitle">אישור פעולה</h2><p id="confirmText"></p><div class="dialog-actions"><button id="confirmCancel">ביטול</button><button class="primary-action" id="confirmAccept">אישור</button></div></dialog><dialog id="modal"><h2 id="modalTitle"></h2><div id="modalBody"></div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:15px"><button id="close">סגור</button></div></dialog>
@@ -259,6 +259,22 @@ function applyUIPreferences(){
  document.body.style.fontSize=Math.max(12,Math.min(22,size))+'px';
 }
 applyUIPreferences();
+$('compareModels').onclick=()=>{
+ const options=Array.from($('models').options);
+ if(options.length<2){notify('יש להתחבר ולטעון לפחות שני מודלים','error');return}
+ const body=modal('השוואת תשובות בין שני מודלים');
+ element('p','שני המודלים יקבלו את אותה בקשה, ללא הרצת פעולות מחשב.',body);
+ const select=document.createElement('select');
+ for(const o of options){const option=document.createElement('option');option.value=o.value;option.textContent=o.textContent;select.append(option)}
+ select.value=options.find(x=>x.value!==$('models').value)?.value||options[0].value;
+ body.append(select);
+ const run=element('button','השווה את ההודעה שבתיבת הכתיבה',body);
+ run.onclick=async()=>{
+  const question=$('prompt').value.trim();
+  if(!question){notify('יש להזין בקשה בתיבת הכתיבה','error');return}
+  try{await call('compare_models',question,$('models').value,select.value);$('prompt').value='';notify('השוואת המודלים התחילה','success')}catch(e){notify(e.message,'error')}
+ };
+};
 $('uiPrefs').onclick=()=>{
  const body=modal('התאמה אישית של הממשק');
  element('label','ערכת נושא',body);
