@@ -2,10 +2,10 @@
 import json
 from agent_core import DesktopAgent
 
-TOOLS={"none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft","windows_snapshot","inspect_window","activate_control"}
+TOOLS={"none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft","windows_snapshot","inspect_window","activate_control","observe_screen"}
 INSTRUCTIONS="""You assist the user with bounded Windows computer actions.
 Always return ONE valid JSON object, without markdown:
-{"message":"Short Hebrew response","tool":"none|list_files|read_file|write_file|open_app|draw_paint|screenshot|click|type_text|hotkey|open_browser|create_word|project_file|email_draft|windows_snapshot|inspect_window|activate_control","arguments":{}}.
+{"message":"Short Hebrew response","tool":"none|list_files|read_file|write_file|open_app|draw_paint|screenshot|click|type_text|hotkey|open_browser|create_word|project_file|email_draft|windows_snapshot|inspect_window|activate_control|observe_screen","arguments":{}}.
 For open_app, arguments={"app":"notepad|paint|explorer|calculator"}.
 For requests to DRAW something in Microsoft Paint, always use tool="draw_paint"
 directly with arguments={"svg":"<svg xmlns=... viewBox=...>...</svg>"}.
@@ -19,6 +19,11 @@ Allowed SVG elements: svg,g,path,rect,circle,ellipse,line,polygon,polyline,
 defs,linearGradient,radialGradient,stop.
 Never claim success or say the drawing was created until draw_paint returns a
 created_png path and opened_in=paint. If the operation fails, address the error.
+observe_screen args={} captures the current display and sends its image once to the
+authorized OpenAI model ONLY AFTER explicit user approval. The image may contain
+private information. First try windows_snapshot/inspect_window; request visual
+inspection only when UI Automation does not expose sufficient information.
+Do not imply the screen was analyzed if the user refused or the call failed.
 Windows-native, application-independent UI discovery tools:
 - windows_snapshot args={} lists visible window handles, titles and bounding rectangles.
 - inspect_window args={"handle":123} provides real UI Automation control IDs, names,
@@ -83,7 +88,17 @@ class OpenAIComputerAgent:
             if action=="none":
                 break
             try:
-                result=self.local.execute(action,plan.get("arguments",{}))
+                if action=="observe_screen":
+                    if not self.local.approval("לאפשר צילום מסך והעלאת התמונה למודל OpenAI לניתוח חד-פעמי? הצילום עלול להכיל פרטים אישיים."):
+                        result={"cancelled":True}
+                    else:
+                        import io
+                        import pyautogui
+                        buf=io.BytesIO()
+                        pyautogui.screenshot().save(buf,format="PNG")
+                        result={"visual_observation":self.signin.describe_image(buf.getvalue(),model)}
+                else:
+                    result=self.local.execute(action,plan.get("arguments",{}))
             except Exception as exc:
                 result={"error":str(exc)}
             report("תוצאת פעולה: "+json.dumps(result,ensure_ascii=False)[:1400])
