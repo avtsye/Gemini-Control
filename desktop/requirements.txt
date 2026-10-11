@@ -2,3 +2,4 @@ PySide6>=6.8,<7
 requests>=2.32,<3
 pyinstaller>=6.10,<7
 PyJWT[crypto]>=2.9,<3
+truststore>=0.10,<1
