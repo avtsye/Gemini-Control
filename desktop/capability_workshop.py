@@ -181,6 +181,38 @@ class CapabilityWorkshop:
         return {"syntax_ok":True,"imports":sorted(set(imports)),"findings":findings,
                 "source":source,"status":json.loads((folder/"manifest.json").read_text(encoding="utf-8"))["status"]}
 
+    def test_capability(self,identifier,payload,approve,timeout=15):
+        """Opt-in live smoke test. Executes code as user, NOT a security sandbox."""
+        folder=self._path(identifier)
+        info=self.inspect(identifier)
+        if info["findings"]:
+            raise PermissionError("Sensitive imports must be resolved before testing")
+        if not isinstance(payload,dict) or len(json.dumps(payload,ensure_ascii=False))>MAX_INPUT:
+            raise ValueError("Invalid test input")
+        if not approve("להריץ בדיקת ניסיון לקוד Python שנוצר? הבדיקה מפעילה קוד בהרשאות המשתמש."):
+            return {"cancelled":True}
+        # Testing doesn't require enabling the capability; records evidence for review.
+        output=folder/"test_outputs"
+        output.mkdir(exist_ok=True)
+        runner=Path(__file__).with_name("capability_runner.py")
+        executable=folder/"venv"/("Scripts/python.exe" if os.name=="nt" else "bin/python")
+        interpreter=str(executable) if executable.is_file() else sys.executable
+        try:
+            process=subprocess.run([interpreter,str(runner),str(folder/"main.py"),str(output)],
+                input=json.dumps(payload,ensure_ascii=False),text=True,capture_output=True,
+                cwd=str(folder),timeout=min(max(timeout,1),30),shell=False)
+            passed=process.returncode==0
+            details=(process.stdout if passed else process.stderr)[-1500:]
+        except subprocess.TimeoutExpired:
+            passed=False
+            details="Timed out"
+        meta=self._manifest(folder)
+        meta["last_test"]={"passed":passed,"at":datetime.now(timezone.utc).isoformat(),
+                           "source_sha256":hashlib.sha256(self.source(identifier).encode("utf-8")).hexdigest(),
+                           "details":details}
+        self._write_manifest(folder,meta)
+        return {"passed":passed,"details":details}
+
     def activate(self,identifier,approved):
         if not approved:raise PermissionError("Explicit approval required")
         folder=self._path(identifier)
@@ -189,6 +221,10 @@ class CapabilityWorkshop:
             raise PermissionError("Sensitive imports require manual review; activation blocked")
         meta_path=folder/"manifest.json"
         meta=json.loads(meta_path.read_text(encoding="utf-8"))
+        test=meta.get("last_test",{})
+        current_hash=hashlib.sha256(self.source(identifier).encode("utf-8")).hexdigest()
+        if not test.get("passed") or test.get("source_sha256")!=current_hash:
+            raise PermissionError("Run a successful approved smoke test before activation")
         meta["status"]="enabled"
         meta_path.write_text(json.dumps(meta,ensure_ascii=False,indent=2),encoding="utf-8")
         return meta
