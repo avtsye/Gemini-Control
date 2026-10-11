@@ -24,7 +24,7 @@ dialog{border:1px solid var(--border);border-radius:17px;width:min(710px,92vw);m
 .toast-area{position:fixed;top:18px;left:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;max-width:min(420px,90vw);pointer-events:none}.toast{pointer-events:auto;background:#202733;color:#fff;border-radius:14px;padding:14px 18px;box-shadow:0 12px 35px #0003;display:flex;align-items:center;gap:12px;line-height:1.6;border-right:4px solid #6fa1ff}.toast.error{border-right-color:#e76666}.toast.success{border-right-color:#51be87}.toast button{margin-right:auto;color:#fff;padding:3px 8px}.dialog-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px}.primary-action{background:#232323;color:#fff}.primary-action:hover{background:#454545}
 .activity{font-size:12px;color:#687282;display:flex;align-items:center;gap:8px;padding:8px 16px}.activity-dot{width:8px;height:8px;border-radius:50%;background:#8b929d}.activity.running .activity-dot{background:#25a776;animation:pulse 1.3s infinite}@keyframes pulse{50%{opacity:.2;transform:scale(.7)}}.file-chips{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px}.file-chip{padding:6px 10px;border-radius:10px;background:#edf3fc;color:#2b4e73;font-size:12px}.small-action{padding:7px 10px;border:1px solid #e1e5eb;border-radius:12px}
 </style></head><body><div class="shell">
-<aside class="side"><div class="brand">AI Control</div><button class="item" id="new">＋ שיחה חדשה</button><div class="section">השיחות שלך</div><div id="chats"></div><div class="side-actions"><button class="item" id="capabilities">✦ סדנת יכולות חדשות</button><button class="item" id="extensions">◈ הרחבות</button><button class="item" id="proposals">◇ הצעות לשיפור</button><button class="item" id="delete">⌫ מחק שיחה</button></div></aside>
+<aside class="side"><div class="brand">AI Control</div><button class="item" id="new">＋ שיחה חדשה</button><div class="section">השיחות שלך</div><div id="chats"></div><div class="side-actions"><button class="item" id="toolsCatalog">☷ כלים זמינים לסוכן</button><button class="item" id="capabilities">✦ סדנת יכולות חדשות</button><button class="item" id="extensions">◈ הרחבות</button><button class="item" id="proposals">◇ הצעות לשיפור</button><button class="item" id="delete">⌫ מחק שיחה</button></div></aside>
 <main class="main"><div class="toolbar"><span class="name">AI Control Desktop</span><button class="pill" id="account">החשבון שלי</button><button class="pill" id="login">התחבר ל־ChatGPT</button><select id="models" aria-label="מודל"></select><button class="pill" id="stop">עצור סוכן</button><span id="state">לא מחובר</span></div>
 <div class="messages" id="scroll"><div class="thread" id="thread"><div class="welcome">איך אפשר לעזור היום?</div></div></div>
 <div class="composer-wrap"><div id="activity" class="activity"><span class="activity-dot"></span><span id="activityText">מוכן לשיחה</span></div><div class="composer"><div id="fileChips" class="file-chips"></div><textarea id="prompt" placeholder="שלח הודעה או בקש לבצע פעולה במחשב…" aria-label="הודעה"></textarea><div class="compose-actions"><button class="small-action" id="attach" title="צרף מסמך" aria-label="צרף מסמך">📎 צרף קובץ</button><label class="toggle"><input type="checkbox" id="agent" checked> מצב סוכן מחשב</label><button class="send" id="send" aria-label="שלח">↑</button></div></div></div></main></div>
@@ -108,6 +108,20 @@ $('close').onclick=()=>$('modal').close();
 $('new').onclick=()=>call('new_chat').then(showChat).catch(e=>status(e.message));
 $('delete').onclick=async()=>{if(await askConfirm('למחוק את השיחה המקומית ואת כל ההודעות שבה?'))call('delete_chat').then(showChat).catch(e=>notify(e.message,'error'))};
 $('extensions').onclick=()=>extensions().catch(e=>notify(e.message,'error'));
+$('toolsCatalog').onclick=async()=>{try{
+ const data=await call('tools_catalog');
+ const body=modal('רשימת כלים זמינים לסוכן');
+ element('h3','כלים מובנים · '+data.native_tools.length,body);
+ element('p',data.native_tools.join(' · '),body);
+ element('h3','פונקציות שפותחו · '+data.capabilities.length,body);
+ if(!data.capabilities.length)element('p','אין עדיין פונקציות מותקנות.',body);
+ for(const tool of data.capabilities){
+   element('p',(tool.status==='enabled'?'✓ פעיל — ':'○ לא פעיל — ')+(tool.name||tool.id),body);
+   if(tool.description)element('p',tool.description,body);
+ }
+ const manage=element('button','פתח סדנת יכולות',body);
+ manage.onclick=()=>capabilityWorkshop().catch(e=>notify(e.message,'error'));
+}catch(e){notify(e.message,'error')}};
 $('capabilities').onclick=()=>capabilityWorkshop().catch(e=>notify(e.message,'error'));
 $('proposals').onclick=()=>proposals().catch(e=>notify(e.message,'error'));
 $('login').onclick=()=>{activity('פותח התחברות…',true);call('login').catch(e=>{status(e.message);activity('התחברות נכשלה')})};
