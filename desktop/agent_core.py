@@ -39,9 +39,13 @@ class DesktopAgent:
             raise PermissionError("Agent is paused")
         args = arguments if isinstance(arguments, dict) else {}
         if tool=="windows_snapshot":
+            if not self.approval("לאסוף כותרות חלונות פתוחים ולשלוח אותן למודל לצורך הבנת מצב המחשב?"):
+                return {"cancelled":True}
             from windows_state import windows_snapshot
             return {"windows":windows_snapshot()}
         if tool=="inspect_window":
+            if not self.approval("לקרוא רכיבי ממשק של חלון ולשלוח את שמותיהם למודל? מידע גלוי בחלון עשוי להיות אישי."):
+                return {"cancelled":True}
             from windows_state import inspect_window
             return inspect_window(args.get("handle"))
         if tool=="activate_control":
