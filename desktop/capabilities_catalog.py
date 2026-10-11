@@ -17,7 +17,7 @@ CAPABILITIES = [
  ("transcription","תמלול עברי","partial",["speech_status","transcribe_local"]),
  ("speech","טקסט לדיבור","partial",["speech_status","text_to_speech"]),
  ("audio_edit","עריכת שמע","partial",["media_engines","convert_media"]),
- ("image_edit","עיבוד תמונות וגרפיקה","partial",["image_info","convert_image","draw_paint"]),
+ ("image_edit","עיבוד תמונות וגרפיקה","partial",["image_info","convert_image","edit_image","draw_paint"]),
  ("video_edit","וידאו וכתוביות","partial",["media_engines","probe_media","convert_media"]),
  ("browser_control","שליטה בדפדפן","partial",["open_browser","click","type_text"]),
  ("web_research","חיפוש וסיכום אתרים","partial",["fetch_page","research_pages"]),
