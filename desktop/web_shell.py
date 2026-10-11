@@ -9,6 +9,7 @@ from openai_signin import ChatGPTSignIn
 from openai_agent import OpenAIComputerAgent
 from conversation_store import ConversationStore
 from extensions import ExtensionManager
+from capability_workshop import CapabilityWorkshop
 
 class Events(QObject):
  message=Signal(str,str)
@@ -24,6 +25,7 @@ class Bridge(QObject):
   super().__init__(parent)
   self.store=ConversationStore()
   self.extension_manager=ExtensionManager()
+  self.workshop=CapabilityWorkshop()
   self.chat_id=self.store.chats()[0][0] if self.store.chats() else self.store.create()
   self.auth=ChatGPTSignIn()
   self.events=Events()
@@ -196,6 +198,81 @@ class Bridge(QObject):
    return self.encode({"id":result,"enabled":False})
   except (ValueError,TypeError) as e:
    return self.encode({"error":"כדי להתקין יש לצרף תוכנית JSON תקינה: "+str(e)})
+
+ @Slot(result=str)
+ def capabilities(self):
+  return self.encode({"items":self.workshop.list()})
+
+ @Slot(str,str,str,result=str)
+ def draft_capability(self,name,description,source):
+  try:
+   identifier=self.workshop.draft(name,description,source)
+   return self.encode({"id":identifier})
+  except (ValueError,SyntaxError,OSError) as e:
+   return self.encode({"error":str(e)})
+
+ @Slot(str,result=str)
+ def inspect_capability(self,identifier):
+  try:return self.encode(self.workshop.inspect(identifier))
+  except (ValueError,SyntaxError,OSError) as e:return self.encode({"error":str(e)})
+
+ @Slot(str,bool,result=str)
+ def enable_capability(self,identifier,approved):
+  try:return self.encode(self.workshop.activate(identifier,approved))
+  except (ValueError,PermissionError,OSError,SyntaxError) as e:
+   return self.encode({"error":str(e)})
+
+ @Slot(str,result=str)
+ def disable_capability(self,identifier):
+  try:self.workshop.disable(identifier);return self.encode({"ok":True})
+  except (ValueError,OSError) as e:return self.encode({"error":str(e)})
+
+ @Slot(str,str,result=str)
+ def run_capability(self,identifier,raw_payload):
+  if self.busy:return self.encode({"error":"משימה אחרת עדיין פעילה"})
+  try:payload=json.loads(raw_payload)
+  except ValueError:return self.encode({"error":"קלט JSON אינו תקין"})
+  self.busy=True
+  self.active_task_chat=self.chat_id
+  def worker():
+   try:
+    result=self.workshop.run(identifier,payload,self.approve)
+    self.events.message.emit("assistant","תוצאת הרחבה: "+json.dumps(result,ensure_ascii=False)[:3000])
+   except Exception as e:self.events.message.emit("system_note","הרצת הרחבה נכשלה: "+str(e)[:500])
+   finally:self.events.finished.emit()
+  threading.Thread(target=worker,daemon=True).start()
+  return self.encode({"started":True})
+
+ @Slot(str,str,result=str)
+ def generate_capability(self,description,model):
+  if self.busy:return self.encode({"error":"משימה אחרת עדיין פעילה"})
+  if not self.auth.access_token:return self.encode({"error":"יש להתחבר ל־ChatGPT"})
+  if model not in [slug for slug,_ in self.available_models]:
+   return self.encode({"error":"מודל לא זמין"})
+  if not isinstance(description,str) or not 5<=len(description)<=1500:
+   return self.encode({"error":"תיאור הרחבה חייב להכיל 5–1500 תווים"})
+  self.busy=True
+  def worker():
+   try:
+    prompt=("Design a Python 3 capability extension for this Windows desktop tool. "
+      "Return ONLY JSON with keys name, description, source. The source must define "
+      "run(payload, output_dir), returning a JSON-serializable result. "
+      "The output_dir is where files must be saved. Use Python standard library where possible. "
+      "For WAV use wave and math; for simple animations create SVG frame files or GIF if a supported "
+      "local image library is explicitly available; do not pretend to generate MP4 without a codec. "
+      "Do not read credentials, use network, execute shell commands, or access files outside output_dir. "
+      "Clearly explain limits in description. User request: "+description)
+    obj=json.loads(self.auth.response(prompt,model))
+    identifier=self.workshop.draft(obj["name"],obj.get("description",""),obj["source"])
+    info=self.workshop.inspect(identifier)
+    self.events.extension_draft.emit({"capability_id":identifier,"name":obj["name"],
+      "description":obj.get("description",""),"source":info["source"],
+      "findings":info["findings"]})
+   except Exception as e:
+    self.events.extension_draft.emit({"error":"יצירת קוד הרחבה נכשלה: "+str(e)[:350]})
+   finally:self.events.finished.emit()
+  threading.Thread(target=worker,daemon=True).start()
+  return self.encode({"started":True})
 
  @Slot(result=str)
  def extensions(self):
