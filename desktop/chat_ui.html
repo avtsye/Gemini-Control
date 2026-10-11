@@ -72,7 +72,7 @@ function call(method,...args){return new Promise((resolve,reject)=>{if(!bridge)r
 function status(value){$('state').textContent=value}
 function activity(value,running=false){$('activityText').textContent=value;$('activity').classList.toggle('running',running)}
 function renderMarkdown(target,source){
- const lines=String(source).split('\\n');
+ const lines=String(source).split('\n');
  let i=0;
  while(i<lines.length){
   const line=lines[i];
@@ -83,17 +83,17 @@ function renderMarkdown(target,source){
    const wrapper=element('div','',target);wrapper.className='code-block';
    const header=element('div',language||'קוד',wrapper);header.className='code-header';
    const copy=element('button','העתק קוד',header);
-   copy.onclick=()=>navigator.clipboard.writeText(content.join('\\n')).then(()=>notify('הקוד הועתק','success')).catch(()=>notify('ההעתקה נכשלה','error'));
+   copy.onclick=()=>navigator.clipboard.writeText(content.join('\n')).then(()=>notify('הקוד הועתק','success')).catch(()=>notify('ההעתקה נכשלה','error'));
    if(['html','htm'].includes(language)){
     const preview=element('button','תצוגת HTML',header);
-    preview.onclick=()=>showArtifact('תצוגת HTML',content.join('\\n'),'html');
+    preview.onclick=()=>showArtifact('תצוגת HTML',content.join('\n'),'html');
    }
-   const pre=element('pre','',wrapper);const code=element('code',content.join('\\n'),pre);code.dir='ltr';
+   const pre=element('pre','',wrapper);const code=element('code',content.join('\n'),pre);code.dir='ltr';
    continue;
   }
-  if(line.includes('|')&&i+1<lines.length&&/^\\s*\\|?[-:| ]+\\|?\\s*$/.test(lines[i+1])){
+  if(line.includes('|')&&i+1<lines.length&&/^\s*\|?[-:| ]+\|?\s*$/.test(lines[i+1])){
    const table=element('table','',target);table.className='md-table';
-   const parse=row=>row.trim().replace(/^\\||\\|$/g,'').split('|').map(x=>x.trim());
+   const parse=row=>row.trim().replace(/^\||\|$/g,'').split('|').map(x=>x.trim());
    const heads=parse(line);const tr=element('tr','',table);
    heads.forEach(x=>element('th',x,tr));i+=2;
    while(i<lines.length&&lines[i].includes('|')){const row=element('tr','',table);parse(lines[i++]).forEach(x=>element('td',x,row))}
