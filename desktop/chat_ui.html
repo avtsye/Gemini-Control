@@ -455,7 +455,22 @@ $('voiceRecord').onclick=async()=>{
     notify('נוצר קובץ WAV מקומי: '+response.recorded_file,'success');
     const panel=modal('הקלטת קול');
     element('p','נוצר קובץ '+response.recorded_file, panel);
-    element('p','אפשר לבקש מהסוכן לתמלל את הקובץ באמצעות מודל התמלול המקומי המותקן.',panel);
+    element('p','כדי לתמלל בעברית בחר תיקיית מודל Whisper מקומי שכבר הותקן בתוך תיקיית העבודה.',panel);
+    const modelFolder=document.createElement('input');
+    modelFolder.placeholder='Models/local-whisper';
+    modelFolder.value='Models/local-whisper';
+    modelFolder.style.width='100%';
+    panel.append(modelFolder);
+    const transcribe=element('button','תמלל את ההקלטה',panel);
+    transcribe.className='primary-action';
+    transcribe.onclick=async()=>{
+     try{
+      await call('transcribe_voice_recording',response.recorded_file,modelFolder.value.trim());
+      notify('תמלול מקומי התחיל','success');
+      activity('מתמלל שמע בעברית…',true);
+      $('modal').close();
+     }catch(error){notify(error.message,'error')}
+    };
    }else notify(response.error||'ההקלטה נכשלה','error');
   }
  }catch(error){
@@ -580,5 +595,10 @@ if(!window.qt||!qt.webChannelTransport){status('גשר Windows אינו זמין
     catch(e){notify(e.message,'error')}
   }};
  }
-}if(msg.type==='reminder'){notify('⏰ תזכורת: '+msg.title,'success');activity('תזכורת: '+msg.title,false)}if(msg.type==='approval'){activity('ממתין לאישור פעולה…',true);askConfirm(msg.description).then(ok=>call('approval_reply',ok).catch(e=>notify(e.message,'error')))}if(msg.type==='activity'){activityHistory.push(String(msg.text||'').slice(0,250));if(activityHistory.length>100)activityHistory.shift();activity(msg.text,true)}if(msg.type==='message')addMessage(msg.role,msg.text);if(msg.type==='models'){updateModels(msg.models);status(msg.status)}if(msg.type==='status'){status(msg.text);activity(msg.text,false)}if(msg.type==='finished'){working=false;$('send').disabled=false;activity('הפעולה הסתיימה');loadChats()}});call('session').then(d=>{updateModels(d.models);status(d.status)});call('chats').then(d=>call('select_chat',d.active).then(showChat));});
+}if(msg.type==='reminder'){notify('⏰ תזכורת: '+msg.title,'success');activity('תזכורת: '+msg.title,false)}if(msg.type==='approval'){activity('ממתין לאישור פעולה…',true);askConfirm(msg.description).then(ok=>call('approval_reply',ok).catch(e=>notify(e.message,'error')))}if(msg.type==='activity'){activityHistory.push(String(msg.text||'').slice(0,250));if(activityHistory.length>100)activityHistory.shift();activity(msg.text,true)}if(msg.type==='voice_transcript'){
+ $('prompt').value=msg.text||'';
+ activity('תמלול הקול הושלם — בדוק את הטקסט ושלח',false);
+ notify('תמלול הקול הוכנס לתיבת ההודעה לבדיקה','success');
+}
+if(msg.type==='message')addMessage(msg.role,msg.text);if(msg.type==='models'){updateModels(msg.models);status(msg.status)}if(msg.type==='status'){status(msg.text);activity(msg.text,false)}if(msg.type==='finished'){working=false;$('send').disabled=false;activity('הפעולה הסתיימה');loadChats()}});call('session').then(d=>{updateModels(d.models);status(d.status)});call('chats').then(d=>call('select_chat',d.active).then(showChat));});
 </script></body></html>
