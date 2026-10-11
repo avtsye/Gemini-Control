@@ -79,6 +79,9 @@ class DesktopAgent:
         if tool=="download_file":
             from internet_tools import download_file
             return download_file(self.workspace,args.get("url"),args.get("destination"),self.approval)
+        if tool=="research_pages":
+            from internet_tools import research_pages
+            return research_pages(args.get("urls"),self.approval)
         if tool=="fetch_page":
             from internet_tools import fetch_page
             return fetch_page(args.get("url"),self.approval)
