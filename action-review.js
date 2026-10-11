@@ -17,6 +17,17 @@ chrome.storage.session.get('pendingWebsiteAction').then(({pendingWebsiteAction})
  action=pendingWebsiteAction;$('summary').textContent=action.description||'פעולת Gemini';
  if(action.type==='question'){$('summary').textContent=action.question;$('approve').hidden=true}
  if(action.type==='open_app'){$('summary').textContent='Gemini מבקש לפתוח את התוכנה: '+action.app+'\n'+(action.description||'')}
+ if(action.type==='type_text'){
+  $('summary').textContent='בחר חלון תוכנה שאליו יוקלד הטקסט. ודא שהסמן נמצא בשדה הנכון לפני ביצוע.';
+  const sel=document.createElement('select');sel.id='targetWindow';sel.style.cssText='display:block;padding:10px;width:100%';$('preview').append(sel);
+  const txt=document.createElement('pre');txt.textContent=action.text;txt.style.cssText='white-space:pre-wrap;direction:rtl;max-height:230px;overflow:auto';$('preview').append(txt);
+  chrome.runtime.sendNativeMessage('org.gemini_control.bridge',{command:'list_windows'},r=>{
+   if(chrome.runtime.lastError||!r?.ok){$('status').textContent='אין אפשרות לקבל רשימת חלונות. ודא שהגשר מעודכן.';return}
+   for(const w of (r.windows||[])){const o=document.createElement('option');o.value=w.handle;o.textContent=w.title;sel.append(o)}
+   if(!sel.options.length)$('status').textContent='אין חלונות נתמכים פתוחים. פתח קודם את התוכנה.';
+  });
+  $('approve').textContent='הקלד בחלון הנבחר';
+ }
  if(action.type==='write_file'){
    $('summary').textContent='Gemini מבקש לשמור קובץ בשם '+action.name+' בתיקיית Documents/GeminiControl-Workspace. בדוק את התוכן לפני אישור.';
    const preview=document.createElement('pre');preview.textContent=action.content.slice(0,50000);preview.style.cssText='direction:ltr;text-align:left;white-space:pre-wrap;max-height:300px;overflow:auto';$('preview').append(preview);
@@ -44,6 +55,13 @@ $('approve').onclick=async()=>{
    const r=await new Promise((resolve,reject)=>chrome.runtime.sendNativeMessage('org.gemini_control.bridge',{command:'open_app',app:action.app,id:String(Date.now())},x=>{
     const e=chrome.runtime.lastError;if(e)reject(Error(e.message));else if(!x?.ok)reject(Error(x?.error||'הפעולה נכשלה'));else resolve(x)}));
    done(r.message||'התוכנה נפתחה');
+  }else if(action.type==='type_text'){
+   const handle=$('targetWindow')?.value;
+   if(!handle)throw Error('בחר חלון מתאים');
+   if(!confirm('הפעולה תקליד את הטקסט בחלון שבחרת. מקם תחילה את הסמן בשדה הרצוי, והשאר את החלון פעיל. לאשר?')){$('approve').disabled=false;return}
+   const r=await new Promise((resolve,reject)=>chrome.runtime.sendNativeMessage('org.gemini_control.bridge',{command:'type_text',handle,text:action.text},x=>{
+    const e=chrome.runtime.lastError;if(e)reject(Error(e.message));else if(!x?.ok)reject(Error(x?.error||'ההקלדה נכשלה'));else resolve(x)}));
+   done(r.message||'הטקסט הוקלד');
   }else if(action.type==='write_file'){
    if(!confirm('ליצור או להחליף את '+action.name+'? אם הקובץ קיים, תיווצר גרסת גיבוי.')){$('approve').disabled=false;return}
    const r=await new Promise((resolve,reject)=>chrome.runtime.sendNativeMessage('org.gemini_control.bridge',{command:'write_file',name:action.name,content:action.content,id:String(Date.now())},x=>{
