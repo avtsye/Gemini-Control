@@ -410,7 +410,7 @@ $('attach').onclick=async()=>{activity('בוחר ומעבד קובץ…',true);t
 for(const file of (a.items||[])){const chip=element('span',(file.image?'🖼️ '+file.name:'📄 '+file.name+' · '+file.characters+' תווים'),$('fileChips'));chip.className='file-chip';chip.title='תוכן הקובץ ייכלל בהודעה לאחר השליחה';}
 activity((a.items||[]).length+' קבצים צורפו · המידע לא הועבר עדיין למודל');}catch(e){notify(e.message,'error');activity('קריאת הקובץ נכשלה')}};
 
-$('stop').onclick=()=>call('toggle_agent').then(x=>status(x.message));
+$('stop').onclick=()=>call('toggle_agent').then(x=>{status(x.message);$('stop').textContent=x.enabled?'עצור סוכן':'המשך סוכן';$('agent').checked=x.enabled}).catch(e=>notify(e.message,'error'));
 $('send').onclick=send;
 $('prompt').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}};
 async function send(){
