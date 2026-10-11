@@ -27,6 +27,14 @@ class ExtensionTests(unittest.TestCase):
  def test_rejects_oversized_workflow(self):
   with self.assertRaises(ValueError):
    self.manager.install({"name":"long","steps":[{"tool":"system_status"}]*7})
+ def test_per_tool_parameters_checked(self):
+  for manifest in (
+   {"name":"bad","steps":[{"tool":"windows_snapshot","arguments":{"url":"https://example.com"}}]},
+   {"name":"bad","steps":[{"tool":"open_browser","arguments":{}}]},
+   {"name":"bad","steps":[{"tool":"project_file","arguments":{"project":"Demo"}}]},
+  ):
+   with self.subTest(manifest=manifest),self.assertRaises(ValueError):
+    self.manager.install(manifest)
  def test_cancel_breaks_chain(self):
   identifier=self.manager.install({"name":"check","steps":[{"tool":"system_status"},{"tool":"windows_snapshot"}]})
   self.manager.toggle(identifier,True)
