@@ -23,6 +23,12 @@ on:
       - 'desktop/knowledge_tools.py'
       - 'desktop/tool_policy.py'
       - 'desktop/reminder_store.py'
+      - 'desktop/capability_store.py'
+      - 'desktop/examples/**'
+      - 'desktop/tests/test_builtin_store.py'
+      - 'desktop/git_tools.py'
+      - 'desktop/github_cli_tools.py'
+      - 'desktop/tests/test_git_tools.py'
       - 'desktop/tests/test_reminder_store.py'
       - 'desktop/tests/test_knowledge_tools.py'
       - 'desktop/tests/test_tool_policy.py'
@@ -62,6 +68,10 @@ jobs:
         run: python desktop/tests/test_workspace_archives.py -v
       - name: Install document libraries
         run: python -m pip install openpyxl python-pptx
+      - name: Test offline plugin store
+        run: python desktop/tests/test_builtin_store.py -v
+      - name: Test Git integrations
+        run: python desktop/tests/test_git_tools.py -v
       - name: Test recurring reminders
         run: python desktop/tests/test_reminder_store.py -v
       - name: Test indexed local knowledge
