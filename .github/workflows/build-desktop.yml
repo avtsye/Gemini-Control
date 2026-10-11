@@ -22,13 +22,14 @@ jobs:
           python desktop/tests/test_openai_signin.py -v
           python desktop/tests/test_session_restore.py -v
           python desktop/tests/test_conversations.py -v
+          python desktop/tests/test_extensions.py -v
           python desktop/tests/test_generic_computer.py -v
           python desktop/tests/test_windows_state.py -v
           python desktop/tests/test_computer_tools.py -v
       - name: Package Windows EXE
         shell: pwsh
         run: |
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --name AIControlDesktop --paths desktop desktop/app_openai.py
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name AIControlDesktop --paths desktop --add-data "desktop/chat_ui.html;." --collect-submodules PySide6.QtWebEngineCore desktop/app_openai.py
           if (!(Test-Path dist/AIControlDesktop.exe)) { throw "EXE missing" }
       - uses: actions/upload-artifact@v4
         with:
