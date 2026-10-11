@@ -39,6 +39,7 @@ jobs:
           python desktop/tests/test_drawing.py -v
           python desktop/tests/test_pdf_tool.py -v
           python desktop/tests/test_offline_ai_adapters.py -v
+          python desktop/tests/test_external_model_worker.py -v
           python desktop/tests/test_subagent_orchestrator.py -v
           python desktop/tests/test_scheduled_agent_store.py -v
           python desktop/tests/test_voice_recorder.py -v
