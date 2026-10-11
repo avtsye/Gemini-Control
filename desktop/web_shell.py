@@ -345,6 +345,30 @@ class Bridge(QObject):
    finally:self.events.finished.emit()
   threading.Thread(target=worker,daemon=True).start()
   return self.encode({"started":True})
+ @Slot(str,str,result=str)
+ def parallel_analysis(self,request,model):
+  if self.busy:return self.encode({"error":"משימה אחרת פעילה"})
+  if not self.auth.access_token:return self.encode({"error":"יש להתחבר ל־ChatGPT"})
+  if model not in [slug for slug,_ in self.available_models]:
+   return self.encode({"error":"מודל לא זמין"})
+  if not isinstance(request,str) or not 3<=len(request)<=12000:
+   return self.encode({"error":"הבקשה אינה תקינה"})
+  chat=self.chat_id
+  self.store.add(chat,"user",request+" [ניתוח מקביל]")
+  self.active_task_chat=chat
+  self.busy=True
+  def worker():
+   try:
+    from subagent_orchestrator import parallel_analysis
+    output=parallel_analysis(self.auth,model,request,
+        lambda update:self.events.activity.emit(update))
+    self.events.message.emit("assistant",output["answer"])
+   except Exception as exc:
+    self.events.message.emit("system_note","ניתוח מקביל נכשל: "+str(exc)[:300])
+   finally:self.events.finished.emit()
+  threading.Thread(target=worker,daemon=True).start()
+  return self.encode({"started":True,"workers":3})
+
  @Slot(str,str,str,result=str)
  def compare_models(self,text,first,second):
   if self.busy:return self.encode({"error":"משימה אחרת פעילה"})
