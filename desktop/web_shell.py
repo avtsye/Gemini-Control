@@ -131,7 +131,38 @@ class Bridge(QObject):
 
  @Slot(result=str)
  def chats(self):
-  return self.encode({"items":[{"id":i,"title":t} for i,t in self.store.chats()],"active":self.chat_id})
+  return self.encode({"items":[{"id":i,"title":t,"pinned":bool(pin),"archived":bool(arc),"project":project} for i,t,pin,arc,project in self.store.chats_detailed()],"active":self.chat_id})
+ @Slot(str,result=str)
+ def search_chats(self,query):
+  return self.encode({"items":[{"id":i,"title":title,"role":role,"snippet":snippet}
+                               for i,title,role,snippet in self.store.search(query)]})
+ @Slot(str,str,str,result=str)
+ def set_chat_property(self,identifier,property_name,value):
+  try:
+   if property_name=="project":self.store.set_flags(identifier,project=value)
+   elif property_name=="pinned":self.store.set_flags(identifier,pinned=value=="true")
+   elif property_name=="archived":self.store.set_flags(identifier,archived=value=="true")
+   else:raise ValueError("Unknown property")
+   return self.encode({"ok":True})
+  except (ValueError,OSError) as exc:return self.encode({"error":str(exc)})
+ @Slot(int,str,result=str)
+ def edit_message(self,index,text):
+  if self.busy:return self.encode({"error":"Cannot edit during active task"})
+  try:
+   self.store.edit_user_message(self.chat_id,index,text)
+   return self.select_chat(self.chat_id)
+  except (ValueError,OSError) as exc:return self.encode({"error":str(exc)})
+ @Slot(result=str)
+ def backup_chats(self):
+  try:
+   filename,_=QFileDialog.getSaveFileName(None,"גיבוי שיחות","Gemini-Control-history.json","JSON (*.json)")
+   if not filename:return self.encode({"cancelled":True})
+   path=Path(filename)
+   if path.exists():return self.encode({"error":"File exists; choose a new filename"})
+   with path.open("x",encoding="utf-8") as stream:
+    json.dump(self.store.export_history(),stream,ensure_ascii=False,indent=2)
+   return self.encode({"saved":str(path)})
+  except (OSError,ValueError) as exc:return self.encode({"error":str(exc)})
  @Slot(str,result=str)
  def select_chat(self,identifier):
   if self.busy:return self.encode({"error":"המתן לסיום המשימה"})
