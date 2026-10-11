@@ -32,3 +32,57 @@ chrome.storage.session.get('geminiPendingRequest').then(async ({geminiPendingReq
   msg('התקבלה בקשה מדף Gemini. בחר תיקייה וקובץ, בדוק את ההוראה ולחץ על "צור הצעת שינוי".');
   await chrome.storage.session.remove('geminiPendingRequest');
 }).catch(e=>msg('שגיאה בקריאת הבקשה: '+String(e.message||e)));
+
+/* Read-only project review; user must click to send selected source files to Gemini. */
+(() => {
+  const panel=document.createElement('section');
+  panel.className='panel';
+  const heading=document.createElement('strong');
+  heading.textContent='5. סקירת פרויקט (ללא שינוי קבצים)';
+  const description=document.createElement('p');
+  description.className='muted';
+  description.textContent='סורק עד 12 קובצי קוד/טקסט מהתיקייה שנבחרה ותיקיות המשנה. עד 10,000 תווים לקובץ ו-50,000 תווים בסך הכול. שמות ותוכן הקבצים שנבחרו יישלחו ל-Gemini, רק לאחר אישורך. אין לבחור תיקיות המכילות סודות.';
+  const input=document.createElement('textarea');
+  input.placeholder='למשל: סרוק את הפרויקט ומצא שגיאות JavaScript וסיכוני אבטחה';
+  const button=document.createElement('button');
+  button.textContent='סקור את קובצי הפרויקט עם Gemini';
+  const output=document.createElement('pre');
+  output.style.cssText='white-space:pre-wrap;overflow-wrap:anywhere;max-height:480px;overflow:auto;direction:rtl';
+  panel.append(heading,description,input,button,output);
+  document.querySelector('main').append(panel);
+  button.addEventListener('click',async()=>{
+    button.disabled=true;
+    try{
+      if(!root)throw Error('ראשית בחר תיקיית עבודה');
+      const request=input.value.trim();
+      if(!request)throw Error('יש לכתוב הוראה לסקירה');
+      const files=[],queue=[{handle:root,path:''}];
+      let chars=0;
+      while(queue.length && files.length<12){
+        const {handle,path}=queue.shift();
+        for await(const [name,entry] of handle.entries()){
+          if(name==='.gemini-control-backups'||name.startsWith('.')||/secret|private|credential|token|password|key/i.test(name))continue;
+          const rel=path+name;
+          if(entry.kind==='directory'){
+            if(queue.length<60)queue.push({handle:entry,path:rel+'/'});
+          }else if(isText(name)){
+            const file=await entry.getFile();
+            if(file.size>15000)continue;
+            const content=await file.text();
+            if(content.includes('\\0')||content.length>10000||chars+content.length>50000)continue;
+            files.push({name:rel,content});chars+=content.length;
+            if(files.length>=12)break;
+          }
+        }
+      }
+      if(!files.length)throw Error('לא נמצאו קובצי טקסט מתאימים לסקירה');
+      const names=files.map(x=>'• '+x.name).join('\\n');
+      if(!confirm('לשלוח ל-Gemini את תוכן '+files.length+' הקבצים הבאים?\\n'+names+'\\n\\nבדוק שאין בהם מידע רגיש.'))return;
+      output.textContent='שולח קבצים לניתוח...';
+      const response=await chrome.runtime.sendMessage({type:'REVIEW_PROJECT',request,files});
+      if(response?.error)throw Error(response.error);
+      output.textContent='נסקרו '+response.filesReviewed+' קבצים. לא בוצעו שינויים.\\n\\n'+response.answer;
+    }catch(e){output.textContent='שגיאה: '+String(e.message||e)}
+    finally{button.disabled=false}
+  });
+})();
