@@ -29,6 +29,10 @@ class GenericComputerTests(unittest.TestCase):
   (pathlib.Path(self.tmp.name)/"malware.exe").write_bytes(b"123")
   with self.assertRaises(ValueError):
    computer_action("open_workspace_file",{"path":"malware.exe"},self.tmp.name,lambda _:True)
+ def test_python_script_cannot_be_launched_as_document(self):
+  (pathlib.Path(self.tmp.name)/"script.py").write_text("print(42)")
+  with self.assertRaises(ValueError):
+   computer_action("open_workspace_file",{"path":"script.py"},self.tmp.name,lambda _:True)
  def test_screen_observation_denied(self):
   class Stub:
    def response(self,*a):return '{"message":"Observe","tool":"observe_screen","arguments":{}}'
