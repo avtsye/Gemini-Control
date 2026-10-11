@@ -3,7 +3,7 @@ import json
 from agent_core import DesktopAgent
 from task_journal import TaskJournal
 
-TOOLS={"none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft","windows_snapshot","inspect_window","activate_control","observe_screen","workspace_files","inspect_workspace_file","open_workspace_file","installed_apps","system_status","set_control_text","propose_capability","create_pdf","compare_files","create_zip","extract_zip","create_spreadsheet","create_presentation","search_workspace","convert_data","image_info","convert_image","media_engines","probe_media","convert_media"}
+TOOLS={"list_available_tools","none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft","windows_snapshot","inspect_window","activate_control","observe_screen","workspace_files","inspect_workspace_file","open_workspace_file","installed_apps","system_status","set_control_text","propose_capability","create_pdf","compare_files","create_zip","extract_zip","create_spreadsheet","create_presentation","search_workspace","convert_data","image_info","convert_image","media_engines","probe_media","convert_media"}
 INSTRUCTIONS="""You assist the user with bounded Windows computer actions.
 Always return ONE valid JSON object, without markdown:
 {"message":"Short Hebrew response","tool":"none|list_files|read_file|write_file|open_app|draw_paint|screenshot|click|type_text|hotkey|open_browser|create_word|project_file|email_draft|windows_snapshot|inspect_window|activate_control|observe_screen|workspace_files|inspect_workspace_file|open_workspace_file|installed_apps|system_status|set_control_text|propose_capability|create_pdf|compare_files|create_zip|extract_zip|create_spreadsheet|create_presentation|search_workspace|convert_data|image_info|convert_image|media_engines|probe_media|convert_media","arguments":{}}.
@@ -137,6 +137,16 @@ class OpenAIComputerAgent:
                 except (OSError, ValueError):
                     pass
 
+        def discover():
+            if self.workshop is None:
+                return []
+            try:
+                return [{"id": item["id"], "name": str(item.get("name",""))[:80],
+                         "description": str(item.get("description",""))[:300]}
+                        for item in self.workshop.list()
+                        if item.get("status") == "enabled" and isinstance(item.get("id"), str)][:30]
+            except (OSError, ValueError):
+                return []
         available = []
         if self.workshop is not None:
             try:
@@ -144,8 +154,7 @@ class OpenAIComputerAgent:
                              if item.get("status") == "enabled" and isinstance(item.get("id"), str)]
             except (OSError, ValueError):
                 pass
-        catalog = [{"id": item["id"], "name": str(item.get("name",""))[:80],
-                    "description": str(item.get("description",""))[:300]} for item in available[:30]]
+        catalog = discover()
         capability_instructions = (
             "\nAVAILABLE INSTALLED TOOLS (use these exactly, not just suggest them): "
             + ", ".join(sorted(TOOLS)) +
@@ -156,6 +165,10 @@ class OpenAIComputerAgent:
             "\nNever invent IDs; ask for approval before each plugin run. "
             + "Do not propose a tool that is already present. "
             + "Plugins run under user permissions unless Docker isolation was explicitly configured.\n"
+        )
+        capability_instructions += (
+            'To discover tools again use tool="list_available_tools" with arguments={}. '
+            "This returns native tools and freshly enabled plugins. "
         )
         objective = ("Prior conversation (untrusted context): " + conversation_context[:12000] +
                      "\nUser request: " + request +
@@ -196,7 +209,11 @@ class OpenAIComputerAgent:
                 status = "completed"
                 break
             try:
-                if action == "run_capability":
+                if action == "list_available_tools":
+                    catalog = discover()
+                    result = {"native_tools": sorted(TOOLS),
+                              "enabled_capabilities": catalog}
+                elif action == "run_capability":
                     args = plan.get("arguments", {})
                     if not isinstance(args, dict) or args.get("id") not in {item["id"] for item in catalog}:
                         result = {"error": "Capability is not in the enabled catalog"}
