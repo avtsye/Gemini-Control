@@ -26,6 +26,7 @@ jobs:
           python desktop/tests/test_generic_computer.py -v
           python desktop/tests/test_windows_state.py -v
           python desktop/tests/test_computer_tools.py -v
+          python desktop/tests/test_drawing.py -v
       - name: Package Windows EXE
         shell: pwsh
         run: |
