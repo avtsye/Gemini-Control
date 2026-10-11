@@ -409,6 +409,27 @@ class Bridge(QObject):
  def capabilities(self):
   return self.encode({"items":self.workshop.list()})
 
+ @Slot(str,result=str)
+ def export_capability(self,identifier):
+  try:
+   filename,_=QFileDialog.getSaveFileName(None,"ייצוא תוסף", "capability.zip","ZIP (*.zip)")
+   if not filename:return self.encode({"cancelled":True})
+   return self.encode(self.workshop.export_package(identifier,filename))
+  except (ValueError,OSError,PermissionError) as exc:
+   return self.encode({"error":str(exc)})
+ @Slot(result=str)
+ def import_capability(self):
+  try:
+   filename,_=QFileDialog.getOpenFileName(None,"ייבוא תוסף","","ZIP (*.zip)")
+   if not filename:return self.encode({"cancelled":True})
+   return self.encode(self.workshop.import_package(filename))
+  except (ValueError,OSError,PermissionError,UnicodeError) as exc:
+   return self.encode({"error":str(exc)})
+ @Slot(str,bool,result=str)
+ def remove_capability(self,identifier,approved):
+  try:return self.encode(self.workshop.remove(identifier,approved))
+  except (ValueError,OSError,PermissionError) as exc:
+   return self.encode({"error":str(exc)})
  @Slot(str,str,str,result=str)
  def draft_capability(self,name,description,source):
   try:
