@@ -10,6 +10,7 @@ from openai_agent import OpenAIComputerAgent
 from conversation_store import ConversationStore
 from extensions import ExtensionManager
 from capability_workshop import CapabilityWorkshop
+from capability_store import list_builtins,install_builtin
 from reminder_store import ReminderStore
 
 class Events(QObject):
@@ -382,33 +383,12 @@ class Bridge(QObject):
 
  @Slot(str,result=str)
  def example_capability(self,kind):
-  templates={"audio":"audio_tone.py","video":"video_gif.py"}
-  if kind not in templates:return self.encode({"error":"דוגמה לא קיימת"})
-  try:
-   source=(Path(__file__).resolve().parent/"examples"/templates[kind]).read_text(encoding="utf-8")
-   name="מחולל WAV" if kind=="audio" else "מחולל אנימציית GIF"
-   identifier=self.workshop.draft(name,"דוגמה מקומית בקוד Python — נדרשת בדיקה לפני הפעלה",source)
-   return self.encode({"id":identifier})
-  except (OSError,ValueError) as e:return self.encode({"error":str(e)})
-
- def _poll_reminders(self):
-  try:
-   for reminder in self.reminder_store.due():
-    self.emit("reminder",title=reminder["title"])
-  except (OSError,ValueError) as exc:
-   self.events.status.emit("תזכורות: "+str(exc)[:120])
+  try:return self.encode({"id":install_builtin(self.workshop,kind)})
+  except (OSError,ValueError,SyntaxError) as exc:return self.encode({"error":str(exc)})
  @Slot(result=str)
- def list_reminders(self):
-  return self.encode({"items":self.reminder_store.list()})
- @Slot(str,int,int,result=str)
- def schedule_reminder(self,title,delay_minutes,repeat_minutes):
-  try:
-   return self.encode(self.reminder_store.add(title,delay_minutes,repeat_minutes))
-  except (ValueError,OSError) as exc:return self.encode({"error":str(exc)})
- @Slot(str,result=str)
- def cancel_reminder(self,identifier):
-  try:return self.encode({"cancelled":self.reminder_store.cancel(identifier)})
-  except (ValueError,OSError) as exc:return self.encode({"error":str(exc)})
+ def builtin_catalog(self):
+  return self.encode({"items":list_builtins()})
+
  @Slot(str,bool,result=str)
  def set_tool_permission(self,name,enabled):
   from openai_agent import TOOLS
