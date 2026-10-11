@@ -5,6 +5,7 @@ Never downloads model weights. Index is built only with explicit approval.
 """
 import json
 import math
+import sys
 from pathlib import Path
 from workspace_data import safe_path
 
@@ -14,11 +15,15 @@ MAX_BYTES=80000
 
 def embedding_status(workspace,model_folder):
     path=safe_path(workspace,model_folder)
-    try:
-        import sentence_transformers
-        engine=True
-    except ImportError:
-        engine=False
+    from model_runtime import has_external_env,check_modules
+    if getattr(sys,"frozen",False) or has_external_env(workspace):
+        engine=check_modules(workspace).get("modules",{}).get("sentence_transformers",False)
+    else:
+        try:
+            import sentence_transformers
+            engine=True
+        except ImportError:
+            engine=False
     return {"engine_installed":engine,"local_model_ready":path.is_dir(),
             "downloads_allowed":False}
 
@@ -31,13 +36,21 @@ def _model(workspace,folder):
     # Explicit local_files_only prevents accidental model downloads.
     return SentenceTransformer(str(path),local_files_only=True)
 
+def _encode(workspace,model_folder,texts):
+    from model_runtime import has_external_env,execute
+    if getattr(sys,"frozen",False) or has_external_env(workspace):
+        path=safe_path(workspace,model_folder)
+        result=execute(workspace,"embed",{"model":str(path),"texts":texts},timeout=300)
+        return result.get("vectors"),result.get("error") or result.get("unavailable")
+    model=_model(workspace,model_folder)
+    if model is None:return None,"Local sentence-transformers model/dependency missing"
+    return model.encode(texts,normalize_embeddings=True),None
+
 def build_semantic_index(workspace,model_folder,folder,approve):
     root=safe_path(workspace,folder)
     if not root.is_dir():raise ValueError("Missing knowledge folder")
     if not approve("לבנות אינדקס סמנטי מקומי מתוך מסמכים באמצעות מודל Embeddings מותקן?"):
         return {"cancelled":True}
-    model=_model(workspace,model_folder)
-    if model is None:return {"unavailable":"Local sentence-transformers model/dependency missing"}
     documents=[]
     for p in sorted(root.rglob("*")):
         if len(documents)>=MAX_FILES:break
@@ -49,7 +62,8 @@ def build_semantic_index(workspace,model_folder,folder,approve):
             documents.append({"path":p.relative_to(Path(workspace).resolve()).as_posix(),
                               "text":body[:2000]})
     if not documents:return {"error":"No supported documents in folder"}
-    embeddings=model.encode([d["text"] for d in documents],normalize_embeddings=True)
+    embeddings,error=_encode(workspace,model_folder,[d["text"] for d in documents])
+    if error:return {"unavailable":error}
     payload={"version":1,"model_folder":model_folder,"folder":folder,
              "items":[{"path":d["path"],"text":d["text"],
                        "vector":[float(v) for v in vector]}
@@ -71,9 +85,9 @@ def semantic_search(workspace,query,model_folder,approve,limit=6):
     data=json.loads(index.read_text(encoding="utf-8"))
     if data.get("version")!=1 or data.get("model_folder")!=model_folder:
         return {"error":"Index does not match requested local model"}
-    model=_model(workspace,model_folder)
-    if model is None:return {"unavailable":"Local embedding model missing"}
-    vector=[float(x) for x in model.encode([query],normalize_embeddings=True)[0]]
+    vectors,error=_encode(workspace,model_folder,[query])
+    if error:return {"unavailable":error}
+    vector=[float(x) for x in vectors[0]]
     ranking=[]
     for item in data.get("items",[])[:MAX_FILES]:
         other=item.get("vector",[])
