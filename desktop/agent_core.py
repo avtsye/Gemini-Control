@@ -24,6 +24,12 @@ class DesktopAgent:
         if not self.enabled:
             raise PermissionError("Agent is paused")
         args = arguments if isinstance(arguments, dict) else {}
+        if tool in {"analyze_csv","chart_csv"}:
+            from data_analysis import analyze_csv,chart_csv
+            if tool=="analyze_csv":
+                return analyze_csv(self.workspace,args.get("source"),self.approval)
+            return chart_csv(self.workspace,args.get("source"),args.get("target"),
+                             args.get("label_column"),args.get("value_column"),self.approval)
         if tool=="search_knowledge":
             from knowledge_search import search_knowledge
             return search_knowledge(self.workspace,args.get("query"),args.get("folder"),
