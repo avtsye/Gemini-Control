@@ -18,6 +18,12 @@ class LifecycleTests(unittest.TestCase):
   rolled=self.workshop.rollback(self.identifier,1,approved=True)
   self.assertEqual(rolled["version"],3)
   self.assertIn("'version':1",self.workshop.source(self.identifier))
+ def test_smoke_test_records_result(self):
+  result=self.workshop.test_capability(self.identifier,{"number":2},lambda _:True)
+  self.assertTrue(result["passed"])
+  last=self.workshop._manifest(self.workshop._path(self.identifier))["last_test"]
+  self.assertTrue(last["passed"])
+  self.assertEqual(last["source_sha256"],self.workshop._manifest(self.workshop._path(self.identifier))["source_sha256"])
  def test_dependency_validation(self):
   with self.assertRaises(PermissionError):self.workshop.set_dependencies(self.identifier,["Pillow==12.0.0"])
   with self.assertRaises(ValueError):self.workshop.set_dependencies(self.identifier,["--extra-index-url=https://bad.example"],True)
