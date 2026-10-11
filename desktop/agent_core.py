@@ -41,6 +41,9 @@ class DesktopAgent:
             if tool=="inspect_python_project":
                 return inspect_python_project(self.workspace,args.get("project"),self.approval)
             return run_python_tests(self.workspace,args.get("project"),self.approval)
+        if tool=="download_file":
+            from internet_tools import download_file
+            return download_file(self.workspace,args.get("url"),args.get("destination"),self.approval)
         if tool=="fetch_page":
             from internet_tools import fetch_page
             return fetch_page(args.get("url"),self.approval)
