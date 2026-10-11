@@ -24,6 +24,11 @@ class DesktopAgent:
         if not self.enabled:
             raise PermissionError("Agent is paused")
         args = arguments if isinstance(arguments, dict) else {}
+        if tool in {"installed_apps","system_status"}:
+            if not self.approval("לאסוף מידע על "+("התוכנות המותקנות" if tool=="installed_apps" else "מצב משאבי המחשב")+" ולשלוח אותו למודל?"):
+                return {"cancelled":True}
+            from computer_inventory import installed_applications,system_status
+            return installed_applications() if tool=="installed_apps" else system_status()
         if tool=="windows_snapshot":
             if not self.approval("לאסוף כותרות חלונות פתוחים ולשלוח אותן למודל לצורך הבנת מצב המחשב?"):
                 return {"cancelled":True}
