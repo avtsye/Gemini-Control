@@ -9,6 +9,8 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
+_standalone_qt_app = None
+
 
 def create_pdf(name, content, workspace, approve, direction="rtl"):
     if not isinstance(name, str) or not 1 <= len(name) <= 100 or Path(name).name != name:
@@ -36,6 +38,12 @@ def create_pdf(name, content, workspace, approve, direction="rtl"):
     if not approve(description):
         return {"cancelled": True}
 
+    # QTextDocument/QPrinter require a live Qt GUI application even in CLI tests.
+    # Keep the fallback alive across calls; the normal desktop already owns one.
+    global _standalone_qt_app
+    from PySide6.QtWidgets import QApplication
+    if QApplication.instance() is None:
+        _standalone_qt_app = QApplication([])
     from PySide6.QtCore import QMarginsF
     from PySide6.QtGui import QFont, QPageSize, QPageLayout, QTextDocument
     from PySide6.QtPrintSupport import QPrinter
