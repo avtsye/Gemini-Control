@@ -29,7 +29,7 @@ body.theme-dark{color-scheme:dark;--bg:#171b22;--sidebar:#1f2630;--text:#e6eaf0;
 .permission-row{display:flex;gap:8px;align-items:center;padding:6px 3px;border-bottom:1px solid var(--border)}.permission-row[hidden]{display:none}
 .activity-entry{padding:8px;border-bottom:1px solid var(--border);line-height:1.6}
 </style></head><body><div class="shell">
-<aside class="side"><div class="brand">AI Control</div><button class="item" id="new">＋ שיחה חדשה</button><div class="section">השיחות שלך</div><input id="chatSearch" placeholder="חיפוש בכל השיחות..." aria-label="חיפוש בשיחות"><button class="item" id="backupChats">↓ גיבוי שיחות ל־JSON</button><div id="chats"></div><div class="side-actions"><button class="item" id="toolsCatalog">☷ כלים זמינים לסוכן</button><button class="item" id="toolSecurity">♧ הרשאות כלים</button><button class="item" id="capabilities">✦ סדנת יכולות חדשות</button><button class="item" id="extensions">◈ הרחבות</button><button class="item" id="proposals">◇ הצעות לשיפור</button><button class="item" id="delete">⌫ מחק שיחה</button></div></aside>
+<aside class="side"><div class="brand">AI Control</div><button class="item" id="new">＋ שיחה חדשה</button><div class="section">השיחות שלך</div><input id="chatSearch" placeholder="חיפוש בכל השיחות..." aria-label="חיפוש בשיחות"><button class="item" id="backupChats">↓ גיבוי שיחות ל־JSON</button><div id="chats"></div><div class="side-actions"><button class="item" id="toolsCatalog">☷ כלים זמינים לסוכן</button><button class="item" id="toolSecurity">♧ הרשאות כלים</button><button class="item" id="reminders">◷ תזכורות מתוזמנות</button><button class="item" id="capabilities">✦ סדנת יכולות חדשות</button><button class="item" id="extensions">◈ הרחבות</button><button class="item" id="proposals">◇ הצעות לשיפור</button><button class="item" id="delete">⌫ מחק שיחה</button></div></aside>
 <main class="main"><div class="toolbar"><span class="name">AI Control Desktop</span><button class="pill" id="uiPrefs">⚙ מראה</button><button class="pill" id="account">החשבון שלי</button><button class="pill" id="login">התחבר ל־ChatGPT</button><select id="models" aria-label="מודל"></select><button class="pill" id="compareModels">⇄ השווה מודלים</button><button class="pill" id="agentActivity">☷ פעילות הסוכן</button><button class="pill" id="stop">עצור סוכן</button><span id="state">לא מחובר</span></div>
 <div class="messages" id="scroll"><div class="thread" id="thread"><div class="welcome">איך אפשר לעזור היום?</div></div></div>
 <div class="composer-wrap"><div id="activity" class="activity"><span class="activity-dot"></span><span id="activityText">מוכן לשיחה</span></div><div class="composer"><div id="fileChips" class="file-chips"></div><textarea id="prompt" placeholder="שלח הודעה או בקש לבצע פעולה במחשב…" aria-label="הודעה"></textarea><div class="compose-actions"><button class="small-action" id="attach" title="צרף מסמך" aria-label="צרף מסמך">📎 צרף קובץ</button><label class="toggle"><input type="checkbox" id="agent" checked> מצב סוכן מחשב</label><button class="send" id="send" aria-label="שלח">↑</button></div></div></div></main><aside id="artifactPanel" class="artifact-panel" hidden><div class="artifact-heading"><strong id="artifactTitle">תצוגת תוצר</strong><button id="closeArtifact" aria-label="סגור תצוגה">×</button></div><div id="artifactContent"></div></aside></div>
@@ -277,6 +277,24 @@ function applyUIPreferences(){
  document.body.style.fontSize=Math.max(12,Math.min(22,size))+'px';
 }
 applyUIPreferences();
+$('reminders').onclick=async()=>{
+ const body=modal('תזכורות מתוזמנות');
+ element('p','התזכורות מופיעות כשהתוכנה פתוחה. אין הרצה אוטומטית של פעולות מחשב.',body);
+ const title=document.createElement('input');title.placeholder='מה להזכיר?';title.maxLength=250;title.style.width='100%';body.append(title);
+ element('p','בעוד כמה דקות?',body);
+ const delay=document.createElement('input');delay.type='number';delay.min=1;delay.max=525600;delay.value=60;body.append(delay);
+ element('p','חזרה כל כמה דקות? (0 = פעם אחת)',body);
+ const repeat=document.createElement('input');repeat.type='number';repeat.min=0;repeat.max=525600;repeat.value=0;body.append(repeat);
+ const save=element('button','צור תזכורת',body);
+ save.onclick=async()=>{try{await call('schedule_reminder',title.value,Number(delay.value),Number(repeat.value));notify('התזכורת נשמרה','success');$('reminders').click()}catch(e){notify(e.message,'error')}};
+ const data=await call('list_reminders');
+ element('h3','תזכורות פעילות ('+data.items.length+')',body);
+ for(const reminder of data.items){
+  const row=element('div','',body);row.className='chat-row';
+  element('span',reminder.title+' — '+new Date(reminder.due*1000).toLocaleString('he-IL'),row);
+  const remove=element('button','בטל',row);remove.onclick=()=>call('cancel_reminder',reminder.id).then(()=>$('reminders').click()).catch(e=>notify(e.message,'error'));
+ }
+};
 $('agentActivity').onclick=()=>{
  const body=modal('יומן הפעילות הנוכחית');
  if(!activityHistory.length)element('p','עדיין אין פעולות שנרשמו במשימה.',body);
@@ -361,5 +379,5 @@ if(!window.qt||!qt.webChannelTransport){status('גשר Windows אינו זמין
     catch(e){notify(e.message,'error')}
   }};
  }
-}if(msg.type==='approval'){activity('ממתין לאישור פעולה…',true);askConfirm(msg.description).then(ok=>call('approval_reply',ok).catch(e=>notify(e.message,'error')))}if(msg.type==='activity'){activityHistory.push(String(msg.text||'').slice(0,250));if(activityHistory.length>100)activityHistory.shift();activity(msg.text,true)}if(msg.type==='message')addMessage(msg.role,msg.text);if(msg.type==='models'){updateModels(msg.models);status(msg.status)}if(msg.type==='status'){status(msg.text);activity(msg.text,false)}if(msg.type==='finished'){working=false;$('send').disabled=false;activity('הפעולה הסתיימה');loadChats()}});call('session').then(d=>{updateModels(d.models);status(d.status)});call('chats').then(d=>call('select_chat',d.active).then(showChat));});
+}if(msg.type==='reminder'){notify('⏰ תזכורת: '+msg.title,'success');activity('תזכורת: '+msg.title,false)}if(msg.type==='approval'){activity('ממתין לאישור פעולה…',true);askConfirm(msg.description).then(ok=>call('approval_reply',ok).catch(e=>notify(e.message,'error')))}if(msg.type==='activity'){activityHistory.push(String(msg.text||'').slice(0,250));if(activityHistory.length>100)activityHistory.shift();activity(msg.text,true)}if(msg.type==='message')addMessage(msg.role,msg.text);if(msg.type==='models'){updateModels(msg.models);status(msg.status)}if(msg.type==='status'){status(msg.text);activity(msg.text,false)}if(msg.type==='finished'){working=false;$('send').disabled=false;activity('הפעולה הסתיימה');loadChats()}});call('session').then(d=>{updateModels(d.models);status(d.status)});call('chats').then(d=>call('select_chat',d.active).then(showChat));});
 </script></body></html>
