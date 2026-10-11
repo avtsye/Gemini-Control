@@ -28,6 +28,7 @@ dialog{border:1px solid var(--border);border-radius:17px;width:min(710px,92vw);m
 body.theme-dark{color-scheme:dark;--bg:#171b22;--sidebar:#1f2630;--text:#e6eaf0;--muted:#a0aab7;--border:#344154;--hover:#2c3544;--accent:#8cbaff}body.theme-dark .composer,body.theme-dark select{background:#222b37;color:var(--text)}body.theme-dark .msg,body.theme-dark dialog{background:var(--bg);color:var(--text)}body.theme-dark pre{background:#283442;color:#e7ecf6}body.theme-dark .item.active{background:#34455b}body.theme-dark .pill,body.theme-dark .small-action{border-color:var(--border)}
 .permission-row{display:flex;gap:8px;align-items:center;padding:6px 3px;border-bottom:1px solid var(--border)}.permission-row[hidden]{display:none}
 .activity-entry{padding:8px;border-bottom:1px solid var(--border);line-height:1.6}
+.builtin-card{padding:12px;margin:8px 0;border:1px solid var(--border);border-radius:12px}.builtin-card p{margin:5px 0;color:var(--muted)}.builtin-card button{border:1px solid var(--border)}
 </style></head><body><div class="shell">
 <aside class="side"><div class="brand">AI Control</div><button class="item" id="new">＋ שיחה חדשה</button><div class="section">השיחות שלך</div><input id="chatSearch" placeholder="חיפוש בכל השיחות..." aria-label="חיפוש בשיחות"><button class="item" id="backupChats">↓ גיבוי שיחות ל־JSON</button><button class="item" id="restoreChats">↑ שחזור שיחות מגיבוי</button><div id="chats"></div><div class="side-actions"><button class="item" id="toolsCatalog">☷ כלים זמינים לסוכן</button><button class="item" id="toolSecurity">♧ הרשאות כלים</button><button class="item" id="reminders">◷ תזכורות מתוזמנות</button><button class="item" id="capabilities">✦ סדנת יכולות חדשות</button><button class="item" id="extensions">◈ הרחבות</button><button class="item" id="proposals">◇ הצעות לשיפור</button><button class="item" id="delete">⌫ מחק שיחה</button></div></aside>
 <main class="main"><div class="toolbar"><span class="name">AI Control Desktop</span><button class="pill" id="uiPrefs">⚙ מראה</button><button class="pill" id="account">החשבון שלי</button><button class="pill" id="login">התחבר ל־ChatGPT</button><select id="models" aria-label="מודל"></select><button class="pill" id="compareModels">⇄ השווה מודלים</button><button class="pill" id="agentActivity">☷ פעילות הסוכן</button><button class="pill" id="stop">עצור סוכן</button><span id="state">לא מחובר</span></div>
@@ -198,10 +199,15 @@ async function capabilityWorkshop(){
  const description=document.createElement('textarea');description.placeholder='למשל: צור קובץ WAV של מנגינה לפי תווים ותדרים';description.style.border='1px solid #bbb';body.append(description);
  const create=element('button','צור קוד הרחבה לבדיקה',body);
  create.onclick=()=>call('generate_capability',description.value,$('models').value).then(()=>notify('יוצר טיוטת יכולת…')).catch(e=>notify(e.message,'error'));
- element('h3','דוגמאות מוכנות',body);
- for(const [kind,name] of [['audio','צור טיוטת מחולל שמע WAV'],['video','צור טיוטת אנימציית GIF']]){
-  const sample=element('button',name,body);
-  sample.onclick=()=>call('example_capability',kind).then(d=>inspectCapability(d.id)).catch(e=>notify(e.message,'error'));
+ element('h3','קטלוג תוספים מובנה',body);
+ element('p','התוספים נשמרים כטיוטות וזקוקים לבדיקה ואישור לפני הפעלה.',body);
+ const builtin=await call('builtin_catalog');
+ for(const item of builtin.items){
+  const row=element('div','',body);row.className='builtin-card';
+  const name=element('strong',item.name,row);name.title=item.description;
+  element('p',item.description,row);
+  const install=element('button','התקן כטיוטה לבדיקה',row);
+  install.onclick=()=>call('example_capability',item.id).then(d=>inspectCapability(d.id)).catch(e=>notify(e.message,'error'));
  }
  const data=await call('capabilities');
  for(const item of data.items){
