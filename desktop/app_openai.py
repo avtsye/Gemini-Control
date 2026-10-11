@@ -6,15 +6,17 @@ import threading
 from PySide6.QtCore import QObject, Signal, Qt
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QTextEdit, QComboBox, QMessageBox
+    QLabel, QPushButton, QTextEdit, QComboBox, QMessageBox, QCheckBox
 )
 from openai_signin import ChatGPTSignIn
+from openai_agent import OpenAIComputerAgent
 
 class Events(QObject):
     signed_in=Signal(object)
     error=Signal(str)
     answer=Signal(str)
     finished=Signal()
+    approval=Signal(str)
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -22,11 +24,15 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("AI Control Desktop — ChatGPT")
         self.resize(960,720)
         self.auth=ChatGPTSignIn()
+        self._approval_event=threading.Event()
+        self._approval_value=False
+        self.agent=OpenAIComputerAgent(self.auth,self.request_approval)
         self.events=Events()
         self.events.signed_in.connect(self.connected)
         self.events.error.connect(self.error)
         self.events.answer.connect(self.reply)
         self.events.finished.connect(self.finish)
+        self.events.approval.connect(self.handle_approval)
         root=QWidget()
         self.setCentralWidget(root)
         root.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
@@ -41,6 +47,12 @@ class MainWindow(QMainWindow):
         self.model.setEnabled(False)
         top.addWidget(self.model)
         layout.addLayout(top)
+        self.agent_mode=QCheckBox("סוכן מחשב — הפעל כלים לאחר אישור")
+        self.agent_mode.setChecked(True)
+        layout.addWidget(self.agent_mode)
+        self.pause=QPushButton("עצור פעולות נוספות")
+        self.pause.clicked.connect(self.pause_agent)
+        layout.addWidget(self.pause)
         self.state=QLabel("לא מחובר · נדרש אישור בדפדפן המערכת")
         layout.addWidget(self.state)
         self.chat=QTextEdit()
@@ -56,8 +68,28 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.send)
         self.chat.append("התחבר באמצעות ChatGPT. תתבקש לאשר את הרשאות האפליקציה בדפדפן.")
         self.chat.append("התחברות משתמשת במכסת המנוי המורשית, לא במפתח API נפרד.")
-        self.chat.append("בגרסת הבסיס אין עדיין הרצת פקודות מחשב מתוך התשובות.")
+        self.chat.append("הסוכן רשאי להציע פתיחת תוכנות וקבצים בתיקייה ייעודית, עד 5 פעולות לבקשה; לפני שינוי או קריאת תוכן תידרש הסכמתך.")
         root.setStyleSheet("QWidget{font-family:Segoe UI;font-size:14px} QPushButton{padding:10px;border-radius:8px;background:#2060b8;color:white} QTextEdit,QComboBox{padding:7px;border:1px solid #bac8d8;border-radius:7px}")
+
+    def pause_agent(self):
+        self.agent.enabled=not self.agent.enabled
+        self.agent.local.enabled=self.agent.enabled
+        self.pause.setText("עצור פעולות נוספות" if self.agent.enabled else "אפשר פעולות")
+        self.state.setText("פעולות המחשב הופסקו" if not self.agent.enabled else "פעולות המחשב מאופשרות")
+
+    def request_approval(self,description):
+        self._approval_event.clear()
+        self.events.approval.emit(description)
+        if not self._approval_event.wait(timeout=180):
+            return False
+        return self._approval_value
+
+    def handle_approval(self,description):
+        self._approval_value=(QMessageBox.question(
+            self,"אישור פעולה במחשב",description,
+            QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No)==QMessageBox.StandardButton.Yes)
+        self._approval_event.set()
 
     def login(self):
         self.connect_button.setEnabled(False)
@@ -94,8 +126,13 @@ class MainWindow(QMainWindow):
         self.send.setEnabled(False)
         self.chat.append("אתה: "+text)
         self.input.clear()
+        agent_mode=self.agent_mode.isChecked()
         def worker():
-            try:self.events.answer.emit(self.auth.response(text,model))
+            try:
+                if agent_mode:
+                    self.agent.run(text,model,self.events.answer.emit)
+                else:
+                    self.events.answer.emit(self.auth.response(text,model))
             except Exception as exc:self.events.error.emit(str(exc))
             finally:self.events.finished.emit()
         threading.Thread(target=worker,daemon=True).start()
