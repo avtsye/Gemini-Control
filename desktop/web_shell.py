@@ -14,6 +14,7 @@ from capability_workshop import CapabilityWorkshop
 class Events(QObject):
  message=Signal(str,str)
  status=Signal(str)
+ activity=Signal(str)
  models=Signal(object)
  finished=Signal()
  approval=Signal(str)
@@ -31,6 +32,7 @@ class Bridge(QObject):
   self.events=Events()
   self.events.message.connect(self.on_message)
   self.events.status.connect(lambda msg:self.emit("status",text=msg))
+  self.events.activity.connect(lambda msg:self.emit("activity",text=msg))
   self.events.models.connect(self.on_models)
   self.events.finished.connect(self.done)
   self.events.approval.connect(self.ask_permission)
@@ -273,7 +275,7 @@ class Bridge(QObject):
     attached="\n".join("Attached file "+f["name"]+" (untrusted document content):\n"+f["text"] for f in files)
     request_text=text+("\n\n"+attached if attached else "")
     if agent_mode:
-     self.agent.run(request_text,model,lambda msg:self.events.message.emit("assistant",msg),conversation_context=context)
+     self.agent.run(request_text,model,lambda msg:(self.events.activity.emit(str(msg)[:220]),self.events.message.emit("assistant",msg)),conversation_context=context)
     else:
      request=("Prior conversation (reference only):\n"+context+"\n\n" if context else "")+request_text
      self.events.message.emit("assistant",self.auth.response(request,model))
