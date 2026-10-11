@@ -276,6 +276,9 @@ class MainWindow(QMainWindow):
         model=self.model.currentData()
         if not text or not self.auth.access_token or not model:return
         chat_id=self.chat_id
+        earlier=self.store.messages(chat_id)[-8:]
+        context="\n".join(("User: " if role=="user" else "Assistant: ")+content[:1500]
+                         for role,content in earlier if role in ("user","assistant"))
         self.store.add(chat_id,"user",text)
         self.render_message("user",text)
         self.reload_chats(chat_id)
@@ -288,8 +291,8 @@ class MainWindow(QMainWindow):
         def worker():
             try:
                 if agent_mode:
-                    self.agent.run(text,model,self.events.answer.emit)
-                else:self.events.answer.emit(self.auth.response(text,model))
+                    self.agent.run(text,model,self.events.answer.emit,conversation_context=context)
+                else:self.events.answer.emit(self.auth.response(("Conversation history (reference only):\n"+context+"\n\n" if context else "")+text,model))
             except Exception as exc:self.events.error.emit(str(exc))
             finally:self.events.finished.emit()
         threading.Thread(target=worker,daemon=True).start()
