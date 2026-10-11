@@ -16,3 +16,13 @@ $('enable').onclick=async()=>{if(!confirm('להפעיל מחדש אפשרות ל
 $('disable').onclick=async()=>{try{await send('set_enabled',{enabled:'off'});await check()}catch(e){alert(e.message)}};
 $('load').onclick=async()=>{try{const r=await send('recent_log');$('log').textContent=(r.lines||[]).join('\n')||'אין פעולות מתועדות'}catch(e){$('log').textContent='שגיאה: '+e.message}};
 check();
+
+async function pending(){
+ const {pendingWebsiteAction}=await chrome.storage.session.get('pendingWebsiteAction');
+ const summary=pendingWebsiteAction?(pendingWebsiteAction.description||pendingWebsiteAction.type):'אין כרגע פעולות שממתינות לאישור';
+ $('pending').textContent=summary;
+ $('review').disabled=!pendingWebsiteAction;
+}
+$('review').onclick=()=>chrome.tabs.create({url:chrome.runtime.getURL('action-review.html')});
+pending();
+setInterval(pending,3000);
