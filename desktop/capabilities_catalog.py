@@ -20,7 +20,7 @@ CAPABILITIES = [
  ("image_edit","עיבוד תמונות וגרפיקה","partial",["image_info","convert_image","draw_paint"]),
  ("video_edit","וידאו וכתוביות","partial",["media_engines","probe_media","convert_media"]),
  ("browser_control","שליטה בדפדפן","partial",["open_browser","click","type_text"]),
- ("web_research","חיפוש וסיכום אתרים","partial",["fetch_page"]),
+ ("web_research","חיפוש וסיכום אתרים","partial",["fetch_page","research_pages"]),
  ("downloads","הורדות","partial",["download_file"]),
  ("browser_forms","מילוי טפסים","partial",["inspect_window","activate_control","set_control_text"]),
  ("external_api","API חיצוני","partial",["fetch_page"]),
