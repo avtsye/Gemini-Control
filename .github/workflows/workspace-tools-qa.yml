@@ -20,6 +20,8 @@ on:
       - 'desktop/file_organizer.py'
       - 'desktop/internet_tools.py'
       - 'desktop/project_quality.py'
+      - 'desktop/knowledge_search.py'
+      - 'desktop/tests/test_knowledge_search.py'
       - 'desktop/knowledge_tools.py'
       - 'desktop/tool_policy.py'
       - 'desktop/reminder_store.py'
@@ -85,6 +87,8 @@ jobs:
         run: python desktop/tests/test_knowledge_tools.py -v
       - name: Test tool permissions
         run: python desktop/tests/test_tool_policy.py -v
+      - name: Test offline knowledge search
+        run: python desktop/tests/test_knowledge_search.py -v
       - name: Test project quality tools
         run: python desktop/tests/test_project_quality.py -v
       - name: Test permissioned HTTPS tool
