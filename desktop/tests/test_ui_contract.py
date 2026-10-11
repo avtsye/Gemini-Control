@@ -47,6 +47,16 @@ class UIContract(unittest.TestCase):
   self.assertIn("self.extension_manager.validate(obj)",self.shell)
   self.assertIn("msg.type==='extension_draft'",self.html)
   self.assertIn("התקן הרחבה מושבתת",self.html)
+ def test_chat_attachments_account_activity(self):
+  self.assertIn('id="attach"',self.html)
+  self.assertIn('id="fileChips"',self.html)
+  self.assertIn('id="account"',self.html)
+  self.assertIn('id="activityText"',self.html)
+  self.assertIn("def pick_attachment(self):",self.shell)
+  self.assertIn("def account_details(self):",self.shell)
+ def test_direct_capability_request(self):
+  self.assertIn('self.generate_capability(text,model)',self.shell)
+  self.assertIn('def generate_capability(self,description,model):',self.shell)
  def test_qt_bridge_signal_name(self):
   self.assertIn('registerObject("api",self.bridge)',self.shell)
   self.assertIn("bridge.event.connect(",self.html)
