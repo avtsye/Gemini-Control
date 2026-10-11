@@ -9,6 +9,10 @@ import os
 import subprocess
 import sys
 import tempfile
+import hashlib
+import shutil
+import venv
+import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -38,6 +42,73 @@ class CapabilityWorkshop:
             raise ValueError("Expected run(payload, output_dir)")
         return source
 
+    def _manifest(self,folder):
+        return json.loads((folder/"manifest.json").read_text(encoding="utf-8"))
+
+    def _write_manifest(self,folder,metadata):
+        (folder/"manifest.json").write_text(json.dumps(metadata,ensure_ascii=False,indent=2),encoding="utf-8")
+
+    def versions(self,identifier):
+        folder=self._path(identifier)
+        backup=folder/"versions"
+        if not backup.exists():return []
+        return sorted(int(p.stem) for p in backup.glob("*.py") if p.stem.isdigit())
+
+    def revise(self,identifier,source,approved=False):
+        if not approved:raise PermissionError("Review and approval required")
+        folder=self._path(identifier)
+        self._validate(source)
+        meta=self._manifest(folder)
+        if meta["status"]=="enabled":
+            meta["status"]="disabled"
+        rev=int(meta.get("version",1))
+        archive=folder/"versions"
+        archive.mkdir(exist_ok=True)
+        shutil.copy2(folder/"main.py",archive/(str(rev)+".py"))
+        (folder/"main.py").write_text(source,encoding="utf-8")
+        meta["version"]=rev+1
+        meta["source_sha256"]=hashlib.sha256(source.encode("utf-8")).hexdigest()
+        self._write_manifest(folder,meta)
+        return {"id":identifier,"version":meta["version"],"status":meta["status"]}
+
+    def rollback(self,identifier,version,approved=False):
+        if not approved:raise PermissionError("Review and approval required")
+        folder=self._path(identifier)
+        if not isinstance(version,int) or version<1:raise ValueError("Invalid version")
+        archive=folder/"versions"/(str(version)+".py")
+        if not archive.is_file():raise FileNotFoundError("Version unavailable")
+        return self.revise(identifier,archive.read_text(encoding="utf-8"),approved=True)
+
+    def set_dependencies(self,identifier,packages,approved=False):
+        if not approved:raise PermissionError("Approval required")
+        if not isinstance(packages,list) or len(packages)>12:raise ValueError("Invalid packages")
+        # Version-pinned requirement names only; never install shell flags or URLs.
+        pattern=r"[A-Za-z][A-Za-z0-9_.-]{0,60}==[0-9][A-Za-z0-9_.+!-]{0,55}"
+        if not all(isinstance(x,str) and re.fullmatch(pattern,x) for x in packages):
+            raise ValueError("Only exact pinned package versions are accepted")
+        folder=self._path(identifier)
+        meta=self._manifest(folder)
+        meta["dependencies"]=packages
+        meta["status"]="disabled"
+        self._write_manifest(folder,meta)
+        return {"dependencies":packages,"installed":False}
+
+    def dependency_status(self,identifier):
+        folder=self._path(identifier)
+        meta=self._manifest(folder)
+        env=folder/"venv"
+        executable=env/("Scripts/python.exe" if os.name=="nt" else "bin/python")
+        return {"dependencies":meta.get("dependencies",[]),"environment_ready":executable.is_file()}
+
+    def create_environment(self,identifier,approved=False):
+        if not approved:raise PermissionError("Explicit approval required")
+        folder=self._path(identifier)
+        meta=self._manifest(folder)
+        # Creation of an empty environment never executes untrusted capability source.
+        env=folder/"venv"
+        if not env.exists():venv.EnvBuilder(with_pip=True,clear=False).create(str(env))
+        return self.dependency_status(identifier)
+
     def draft(self,name,description,source):
         if not isinstance(name,str) or not 1<=len(name)<=80:raise ValueError("Invalid name")
         source=self._validate(source)
@@ -45,7 +116,7 @@ class CapabilityWorkshop:
         folder=self.root/identifier
         folder.mkdir()
         metadata={"id":identifier,"name":name,"description":str(description)[:1000],
-                  "status":"draft","created":datetime.now(timezone.utc).isoformat(),
+                  "status":"draft","version":1,"source_sha256":hashlib.sha256(source.encode("utf-8")).hexdigest(),"created":datetime.now(timezone.utc).isoformat(),
                   "warnings":["Python capability code is not sandboxed. Review before activation."]}
         (folder/"main.py").write_text(source,encoding="utf-8")
         (folder/"manifest.json").write_text(json.dumps(metadata,ensure_ascii=False,indent=2),encoding="utf-8")
@@ -87,7 +158,9 @@ class CapabilityWorkshop:
     def activate(self,identifier,approved):
         if not approved:raise PermissionError("Explicit approval required")
         folder=self._path(identifier)
-        self.inspect(identifier)
+        info=self.inspect(identifier)
+        if info["findings"]:
+            raise PermissionError("Sensitive imports require manual review; activation blocked")
         meta_path=folder/"manifest.json"
         meta=json.loads(meta_path.read_text(encoding="utf-8"))
         meta["status"]="enabled"
@@ -113,7 +186,9 @@ class CapabilityWorkshop:
         output_dir.mkdir(exist_ok=True)
         # Separate process provides a timeout and crash isolation, NOT OS security sandboxing.
         runner=Path(__file__).with_name("capability_runner.py")
-        result=subprocess.run([sys.executable,str(runner),str(folder/"main.py"),str(output_dir)],
+        executable=folder/"venv"/("Scripts/python.exe" if os.name=="nt" else "bin/python")
+        interpreter=str(executable) if executable.is_file() else sys.executable
+        result=subprocess.run([interpreter,str(runner),str(folder/"main.py"),str(output_dir)],
             input=json.dumps(payload,ensure_ascii=False),capture_output=True,text=True,
             timeout=timeout,cwd=str(folder),shell=False)
         if result.returncode:
