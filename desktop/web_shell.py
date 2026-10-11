@@ -137,6 +137,28 @@ class Bridge(QObject):
   threading.Thread(target=worker,daemon=True).start()
   return self.encode({"started":True})
 
+ @Slot(str,result=str)
+ def setup_local_ai(self,raw_features):
+  if self.busy:return self.encode({"error":"משימה אחרת פעילה"})
+  try:
+   features=json.loads(raw_features)
+   if not isinstance(features,list) or not features or any(
+       name not in {"speech","embedding","image"} for name in features):
+    return self.encode({"error":"יש לבחור מנועי AI מוכרים"})
+  except ValueError:return self.encode({"error":"בחירת מנועים לא תקינה"})
+  self.busy=True
+  def worker():
+   try:
+    from model_runtime import prepare_environment
+    result=prepare_environment(self.agent.local.workspace,features,self.approve)
+    self.events.message.emit("assistant","התקנת מנועי AI: "+
+        json.dumps(result,ensure_ascii=False)[:1700])
+   except Exception as exc:
+    self.events.message.emit("system_note","התקנת מנועי AI נכשלה: "+str(exc)[:300])
+   finally:self.events.finished.emit()
+  threading.Thread(target=worker,daemon=True).start()
+  return self.encode({"started":True})
+
  @Slot(str,str,result=str)
  def local_ai_status(self,embedding_folder,image_folder):
   try:
