@@ -33,7 +33,7 @@ CAPABILITIES = [
  ("scheduling","תזמון","missing",[]),
  ("task_management","ניהול משימות","partial",[]),
  ("subagents","סוכני משנה","missing",[]),
- ("semantic_search","חיפוש סמנטי","missing",[]),
+ ("semantic_search","חיפוש סמנטי","partial",["search_knowledge"]),
  ("generate_python","יצירת הרחבות Python","partial",[]),
  ("deps_environment","ספריות וסביבה נפרדת","partial",[]),
  ("self_test_repair","בדיקה ותיקון של הרחבות","partial",[]),
