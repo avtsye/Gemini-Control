@@ -272,7 +272,8 @@ class Bridge(QObject):
  @Slot(result=str)
  def tools_catalog(self):
   from openai_agent import TOOLS
-  return self.encode({"native_tools":sorted(TOOLS),
+  from capabilities_catalog import catalog
+  return self.encode({"coverage":catalog(TOOLS),"native_tools":sorted(TOOLS),
     "capabilities":[{"id":item.get("id"),"name":item.get("name"),
                      "status":item.get("status"),"description":item.get("description","")}
                      for item in self.workshop.list()]})
