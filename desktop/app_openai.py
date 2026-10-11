@@ -66,7 +66,8 @@ class MainWindow(QMainWindow):
         self.send.setEnabled(False)
         self.send.clicked.connect(self.ask)
         layout.addWidget(self.send)
-        self.chat.append("התחבר באמצעות ChatGPT. תתבקש לאשר את הרשאות האפליקציה בדפדפן.")
+        self.chat.append("מנסה לשחזר חיבור לחשבון ChatGPT באופן מאובטח...")
+        self.restore_login()
         self.chat.append("התחברות משתמשת במכסת המנוי המורשית, לא במפתח API נפרד.")
         self.chat.append("הסוכן רשאי להציע פתיחת תוכנות וקבצים בתיקייה ייעודית, עד 5 פעולות לבקשה; לפני שינוי או קריאת תוכן תידרש הסכמתך.")
         root.setStyleSheet("QWidget{font-family:Segoe UI;font-size:14px} QPushButton{padding:10px;border-radius:8px;background:#2060b8;color:white} QTextEdit,QComboBox{padding:7px;border:1px solid #bac8d8;border-radius:7px}")
@@ -90,6 +91,17 @@ class MainWindow(QMainWindow):
             QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No)==QMessageBox.StandardButton.Yes)
         self._approval_event.set()
+
+    def restore_login(self):
+        def worker():
+            try:
+                if self.auth.restore_session():
+                    self.events.signed_in.emit((self.auth.identity,self.auth.models()))
+                else:
+                    self.events.answer.emit("אין חיבור שמור בתוקף. לחץ Continue with ChatGPT להתחברות.")
+            except Exception as exc:
+                self.events.answer.emit("שחזור החיבור נכשל; אפשר להתחבר מחדש: "+str(exc)[:180])
+        threading.Thread(target=worker,daemon=True).start()
 
     def login(self):
         self.connect_button.setEnabled(False)
