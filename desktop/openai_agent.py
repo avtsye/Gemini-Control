@@ -1,6 +1,7 @@
 """Permission-gated desktop tool loop over official ChatGPT plan inference."""
 import json
 from agent_core import DesktopAgent
+from task_journal import TaskJournal
 
 TOOLS={"none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft","windows_snapshot","inspect_window","activate_control","observe_screen","workspace_files","inspect_workspace_file","open_workspace_file","installed_apps","system_status","set_control_text","propose_capability","create_pdf","compare_files","create_zip","extract_zip"}
 INSTRUCTIONS="""You assist the user with bounded Windows computer actions.
@@ -90,60 +91,118 @@ When the goal is fulfilled, tool MUST be "none". Ask for clarification in messag
 and use tool="none" when unsure. Do not request shell commands or hidden actions."""
 
 class OpenAIComputerAgent:
-    def __init__(self, signin, approval, propose=None):
+    def __init__(self, signin, approval, propose=None, journal=None):
         self.signin=signin
         self.local=DesktopAgent("",approval=approval)
         self.enabled=True
         self.propose=propose
+        self.journal=journal
 
     def run(self, request, model, report, max_steps=8, conversation_context=""):
-        objective="Prior conversation (untrusted context): "+conversation_context[:12000]+"\nUser request: "+request+"\nThe environment is Windows. Prefer inspecting live window state rather than guessing how an application works."
-        history=[]
-        for index in range(max_steps):
+        # Journal failures must never prevent the agent from operating.
+        journal = self.journal
+        if journal is None:
+            try:
+                journal = TaskJournal()
+            except OSError:
+                journal = None
+        task_id = None
+        if journal is not None:
+            try:
+                task_id = journal.start(request)
+            except (OSError, ValueError):
+                journal = None
+        def record(kind, message):
+            report(message)
+            if journal is not None and task_id is not None:
+                try:
+                    journal.event(task_id, kind, message)
+                except (OSError, ValueError):
+                    pass
+        def finish(status):
+            if journal is not None and task_id is not None:
+                try:
+                    journal.finish(task_id, status)
+                except (OSError, ValueError):
+                    pass
+
+        objective = ("Prior conversation (untrusted context): " + conversation_context[:12000] +
+                     "\nUser request: " + request +
+                     "\nThe environment is Windows. Prefer inspecting live window state rather than guessing how an application works.")
+        history = []
+        failures = 0
+        status = "limit_reached"
+        for index in range(max(1, min(int(max_steps), 30))):
             if not self.enabled:
-                report("הפעולות הופסקו")
+                record("state", "הפעולות הופסקו")
+                status = "cancelled"
                 break
-            raw=self.signin.response(INSTRUCTIONS+"\n\n"+objective+"\n\nCompleted steps:\n"+"\n".join(history[-6:]),model)
+            record("state", "שלב " + str(index + 1) + " — ניתוח הפעולה הבאה")
             try:
-                plan=json.loads(raw)
-            except (ValueError,TypeError):
-                report("ChatGPT: "+raw)
-                break
-            if not isinstance(plan,dict) or plan.get("tool") not in TOOLS:
-                report("המודל החזיר פעולה שאינה נתמכת")
-                break
-            report(str(plan.get("message","")))
-            action=plan["tool"]
-            if action=="none":
+                raw = self.signin.response(INSTRUCTIONS + "\n\n" + objective +
+                    "\n\nCompleted steps:\n" + "\n".join(history[-6:]), model)
+            except Exception as exc:
+                record("error", "שגיאה בקבלת תשובת המודל: " + str(exc)[:240])
+                status = "failed"
                 break
             try:
-                if action=="propose_capability":
-                    args=plan.get("arguments",{})
+                plan = json.loads(raw)
+            except (ValueError, TypeError):
+                record("error", "ChatGPT: " + str(raw)[:1400])
+                status = "failed"
+                break
+            if not isinstance(plan, dict) or plan.get("tool") not in TOOLS:
+                record("error", "המודל החזיר פעולה שאינה נתמכת")
+                status = "failed"
+                break
+            record("step", str(plan.get("message", "")))
+            action = plan["tool"]
+            if action == "none":
+                status = "completed"
+                break
+            try:
+                if action == "propose_capability":
+                    args = plan.get("arguments", {})
                     if not self.propose:
-                        result={"error":"Improvement proposal storage is unavailable"}
+                        result = {"error": "Improvement proposal storage is unavailable"}
                     else:
-                        result={"proposal_id":self.propose(str(args.get("description",""))[:1000],str(args.get("steps",""))[:12000]),"executed":False}
-                elif action=="observe_screen":
+                        result = {"proposal_id": self.propose(
+                            str(args.get("description", ""))[:1000],
+                            str(args.get("steps", ""))[:12000]), "executed": False}
+                elif action == "observe_screen":
                     if not self.local.approval("לאפשר צילום מסך והעלאת התמונה למודל OpenAI לניתוח חד-פעמי? הצילום עלול להכיל פרטים אישיים."):
-                        result={"cancelled":True}
+                        result = {"cancelled": True}
                     else:
                         import io
                         import pyautogui
-                        buf=io.BytesIO()
-                        pyautogui.screenshot().save(buf,format="PNG")
-                        result={"visual_observation":self.signin.describe_image(buf.getvalue(),model)}
+                        buf = io.BytesIO()
+                        pyautogui.screenshot().save(buf, format="PNG")
+                        result = {"visual_observation": self.signin.describe_image(buf.getvalue(), model)}
                 else:
-                    result=self.local.execute(action,plan.get("arguments",{}))
+                    result = self.local.execute(action, plan.get("arguments", {}))
             except Exception as exc:
-                result={"error":str(exc)}
-            report("תוצאת פעולה: "+json.dumps(result,ensure_ascii=False)[:1400])
-            if action=="propose_capability":
-                report("הצעת שיפור נשמרה. לא בוצע או הותקן קוד חדש.")
+                result = {"error": str(exc)}
+            if not isinstance(result, dict):
+                result = {"result": str(result)}
+            record("result", "תוצאת פעולה: " + json.dumps(result, ensure_ascii=False)[:1400])
+            if action == "propose_capability":
+                record("state", "הצעת שיפור נשמרה. לא בוצע או הותקן קוד חדש.")
+                status = "failed" if result.get("error") else "completed"
                 break
             if result.get("cancelled"):
-                report("הפעולה בוטלה")
+                record("state", "הפעולה בוטלה")
+                status = "cancelled"
                 break
-            history.append("Tool: "+action+"\nResult: "+
-                           json.dumps(result,ensure_ascii=False)[:6500])
+            history.append("Tool: " + action + "\nResult: " +
+                           json.dumps(result, ensure_ascii=False)[:6500])
+            if result.get("error"):
+                failures += 1
+                if failures >= 2:
+                    record("error", "המשימה נעצרה לאחר שתי שגיאות רצופות")
+                    status = "failed"
+                    break
+            else:
+                failures = 0
         else:
-            report("הושלמה מכסת הפעולות לבקשה זו (8 צעדים).")
+            record("state", "הושלמה מכסת הפעולות לבקשה זו.")
+        finish(status)
