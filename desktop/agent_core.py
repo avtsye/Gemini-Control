@@ -36,6 +36,11 @@ class DesktopAgent:
             if tool == "create_zip":
                 return create_zip(self.workspace,args.get("sources"),args.get("target"),self.approval)
             return extract_zip(self.workspace,args.get("archive"),args.get("destination"),self.approval)
+        if tool in {"move_workspace_file","sevenzip_status"}:
+            from file_organizer import move_workspace_file,sevenzip_status
+            if tool=="sevenzip_status":return sevenzip_status()
+            return move_workspace_file(self.workspace,args.get("source"),
+                                       args.get("destination"),self.approval)
         if tool in {"speech_status","text_to_speech","transcribe_local"}:
             from speech_tools import speech_status,text_to_speech,transcribe_local
             if tool=="speech_status":return speech_status()
