@@ -38,10 +38,13 @@ jobs:
           python desktop/tests/test_computer_tools.py -v
           python desktop/tests/test_drawing.py -v
           python desktop/tests/test_pdf_tool.py -v
+          python desktop/tests/test_offline_ai_adapters.py -v
+          python desktop/tests/test_subagent_orchestrator.py -v
+          python desktop/tests/test_scheduled_agent_store.py -v
       - name: Package Windows EXE
         shell: pwsh
         run: |
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --name AIControlDesktop --paths desktop --add-data "desktop/chat_ui.html;." --add-data "desktop/examples;examples" --collect-submodules PySide6.QtWebEngineCore desktop/app_openai.py
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name AIControlDesktop --paths desktop --add-data "desktop/chat_ui.html;." --add-data "desktop/examples;examples" --collect-submodules PySide6.QtWebEngineCore --collect-submodules PySide6.QtMultimedia --hidden-import voice_recorder --hidden-import scheduled_agent_store --hidden-import subagent_orchestrator desktop/app_openai.py
           if (!(Test-Path dist/AIControlDesktop.exe)) { throw "EXE missing" }
       - uses: actions/upload-artifact@v4
         with:
