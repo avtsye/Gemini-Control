@@ -36,6 +36,14 @@ class DesktopAgent:
             if tool == "create_zip":
                 return create_zip(self.workspace,args.get("sources"),args.get("target"),self.approval)
             return extract_zip(self.workspace,args.get("archive"),args.get("destination"),self.approval)
+        if tool=="schedule_reminder":
+            from reminder_store import ReminderStore
+            title=args.get("title")
+            delay=args.get("delay_minutes")
+            repeat=args.get("repeat_minutes",0)
+            if not self.approval("ליצור תזכורת מקומית חדשה שתוצג כשהאפליקציה פתוחה?"):
+                return {"cancelled":True}
+            return ReminderStore().add(title,delay,repeat)
         if tool in {"index_workspace","search_knowledge"}:
             from knowledge_tools import index_workspace,search_knowledge
             if tool=="index_workspace":return index_workspace(self.workspace,self.approval)
