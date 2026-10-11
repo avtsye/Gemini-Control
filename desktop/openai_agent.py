@@ -3,10 +3,10 @@ import json
 from agent_core import DesktopAgent
 from task_journal import TaskJournal
 
-TOOLS={"none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft","windows_snapshot","inspect_window","activate_control","observe_screen","workspace_files","inspect_workspace_file","open_workspace_file","installed_apps","system_status","set_control_text","propose_capability","create_pdf","compare_files","create_zip","extract_zip","create_spreadsheet","create_presentation","search_workspace","convert_data","image_info","convert_image"}
+TOOLS={"none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft","windows_snapshot","inspect_window","activate_control","observe_screen","workspace_files","inspect_workspace_file","open_workspace_file","installed_apps","system_status","set_control_text","propose_capability","create_pdf","compare_files","create_zip","extract_zip","create_spreadsheet","create_presentation","search_workspace","convert_data","image_info","convert_image","media_engines","probe_media","convert_media"}
 INSTRUCTIONS="""You assist the user with bounded Windows computer actions.
 Always return ONE valid JSON object, without markdown:
-{"message":"Short Hebrew response","tool":"none|list_files|read_file|write_file|open_app|draw_paint|screenshot|click|type_text|hotkey|open_browser|create_word|project_file|email_draft|windows_snapshot|inspect_window|activate_control|observe_screen|workspace_files|inspect_workspace_file|open_workspace_file|installed_apps|system_status|set_control_text|propose_capability|create_pdf|compare_files|create_zip|extract_zip|create_spreadsheet|create_presentation|search_workspace|convert_data|image_info|convert_image","arguments":{}}.
+{"message":"Short Hebrew response","tool":"none|list_files|read_file|write_file|open_app|draw_paint|screenshot|click|type_text|hotkey|open_browser|create_word|project_file|email_draft|windows_snapshot|inspect_window|activate_control|observe_screen|workspace_files|inspect_workspace_file|open_workspace_file|installed_apps|system_status|set_control_text|propose_capability|create_pdf|compare_files|create_zip|extract_zip|create_spreadsheet|create_presentation|search_workspace|convert_data|image_info|convert_image|media_engines|probe_media|convert_media","arguments":{}}.
 For open_app, arguments={"app":"notepad|paint|explorer|calculator"}.
 For requests to DRAW something in Microsoft Paint, always use tool="draw_paint"
 directly with arguments={"svg":"<svg xmlns=... viewBox=...>...</svg>"}.
@@ -56,6 +56,9 @@ RTL layout after approval; direction may be "ltr" for English. Never claim
 the PDF was created unless the tool returned "created_pdf". To make a PDF,
 use create_pdf rather than proposing a missing native tool.
 Other approved tools:
+media_engines args={} detects local FFmpeg/FFprobe; never claims video or audio processing is available if missing.
+probe_media args={"name":"clip.mp4"} reads metadata from a local media file after approval.
+convert_media args={"source":"clip.mp4","target":"clip.webm"} converts local media with already-installed FFmpeg and user approval; never downloads codecs.
 image_info args={"name":"picture.png"} returns image dimensions and format with user approval.
 convert_image args={"source":"picture.png","target":"picture.webp","max_width":1920,"max_height":1920} converts and resizes a workspace image without overwriting.
 search_workspace args={"query":"keyword"} searches filenames and supported UTF-8 text inside the workspace with user consent.
