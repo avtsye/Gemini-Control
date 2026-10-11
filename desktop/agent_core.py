@@ -24,6 +24,15 @@ class DesktopAgent:
         if not self.enabled:
             raise PermissionError("Agent is paused")
         args = arguments if isinstance(arguments, dict) else {}
+        if tool in {"embedding_status","build_semantic_index","semantic_search"}:
+            from semantic_tools import embedding_status,build_semantic_index,semantic_search
+            if tool=="embedding_status":
+                return embedding_status(self.workspace,args.get("model_folder"))
+            if tool=="build_semantic_index":
+                return build_semantic_index(self.workspace,args.get("model_folder"),
+                                            args.get("folder"),self.approval)
+            return semantic_search(self.workspace,args.get("query"),args.get("model_folder"),
+                                   self.approval,args.get("limit",6))
         if tool in {"analyze_csv","chart_csv"}:
             from data_analysis import analyze_csv,chart_csv
             if tool=="analyze_csv":
