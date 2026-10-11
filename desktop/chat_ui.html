@@ -24,15 +24,16 @@ dialog{border:1px solid var(--border);border-radius:17px;width:min(710px,92vw);m
 .toast-area{position:fixed;top:18px;left:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;max-width:min(420px,90vw);pointer-events:none}.toast{pointer-events:auto;background:#202733;color:#fff;border-radius:14px;padding:14px 18px;box-shadow:0 12px 35px #0003;display:flex;align-items:center;gap:12px;line-height:1.6;border-right:4px solid #6fa1ff}.toast.error{border-right-color:#e76666}.toast.success{border-right-color:#51be87}.toast button{margin-right:auto;color:#fff;padding:3px 8px}.dialog-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px}.primary-action{background:#232323;color:#fff}.primary-action:hover{background:#454545}
 .activity{font-size:12px;color:#687282;display:flex;align-items:center;gap:8px;padding:8px 16px}.activity-dot{width:8px;height:8px;border-radius:50%;background:#8b929d}.activity.running .activity-dot{background:#25a776;animation:pulse 1.3s infinite}@keyframes pulse{50%{opacity:.2;transform:scale(.7)}}.file-chips{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px}.file-chip{padding:6px 10px;border-radius:10px;background:#edf3fc;color:#2b4e73;font-size:12px}.small-action{padding:7px 10px;border:1px solid #e1e5eb;border-radius:12px}.composer.drop-target{outline:3px dashed #578aca;background:#edf6ff}
 .chat-row{display:flex;gap:3px;align-items:center}.chat-row>.item{flex:1;min-width:0}.chat-row>.small-action{flex:none;padding:4px 8px}#chatSearch{width:100%;border:1px solid var(--border);border-radius:10px;padding:9px;margin:4px 0 8px;background:var(--bg);color:var(--text)}
+.code-block{border:1px solid var(--border);border-radius:12px;margin:10px 0;overflow:hidden}.code-block pre{margin:0;max-height:420px;white-space:pre;overflow:auto;border-radius:0}.code-header{background:var(--sidebar);padding:5px 12px;display:flex;align-items:center;gap:8px}.code-header button{font-size:12px;border:1px solid var(--border);padding:5px 9px}.md-table{border-collapse:collapse;width:100%;margin:10px 0}.md-table td,.md-table th{border:1px solid var(--border);padding:7px;text-align:right}.markdown-heading{font-weight:700;font-size:1.12rem;margin-top:10px}.artifact-panel{width:min(42vw,540px);border-right:1px solid var(--border);background:var(--bg);overflow:auto;padding:12px}.artifact-panel[hidden]{display:none}.artifact-heading{display:flex;justify-content:space-between;align-items:center}.artifact-panel iframe{width:100%;height:70vh;border:1px solid var(--border)}@media(max-width:860px){.artifact-panel{position:fixed;z-index:20;inset:0 30% 0 0;width:70%;box-shadow:0 0 15px #0002}}
 </style></head><body><div class="shell">
 <aside class="side"><div class="brand">AI Control</div><button class="item" id="new">＋ שיחה חדשה</button><div class="section">השיחות שלך</div><input id="chatSearch" placeholder="חיפוש בכל השיחות..." aria-label="חיפוש בשיחות"><button class="item" id="backupChats">↓ גיבוי שיחות ל־JSON</button><div id="chats"></div><div class="side-actions"><button class="item" id="toolsCatalog">☷ כלים זמינים לסוכן</button><button class="item" id="capabilities">✦ סדנת יכולות חדשות</button><button class="item" id="extensions">◈ הרחבות</button><button class="item" id="proposals">◇ הצעות לשיפור</button><button class="item" id="delete">⌫ מחק שיחה</button></div></aside>
 <main class="main"><div class="toolbar"><span class="name">AI Control Desktop</span><button class="pill" id="account">החשבון שלי</button><button class="pill" id="login">התחבר ל־ChatGPT</button><select id="models" aria-label="מודל"></select><button class="pill" id="stop">עצור סוכן</button><span id="state">לא מחובר</span></div>
 <div class="messages" id="scroll"><div class="thread" id="thread"><div class="welcome">איך אפשר לעזור היום?</div></div></div>
-<div class="composer-wrap"><div id="activity" class="activity"><span class="activity-dot"></span><span id="activityText">מוכן לשיחה</span></div><div class="composer"><div id="fileChips" class="file-chips"></div><textarea id="prompt" placeholder="שלח הודעה או בקש לבצע פעולה במחשב…" aria-label="הודעה"></textarea><div class="compose-actions"><button class="small-action" id="attach" title="צרף מסמך" aria-label="צרף מסמך">📎 צרף קובץ</button><label class="toggle"><input type="checkbox" id="agent" checked> מצב סוכן מחשב</label><button class="send" id="send" aria-label="שלח">↑</button></div></div></div></main></div>
+<div class="composer-wrap"><div id="activity" class="activity"><span class="activity-dot"></span><span id="activityText">מוכן לשיחה</span></div><div class="composer"><div id="fileChips" class="file-chips"></div><textarea id="prompt" placeholder="שלח הודעה או בקש לבצע פעולה במחשב…" aria-label="הודעה"></textarea><div class="compose-actions"><button class="small-action" id="attach" title="צרף מסמך" aria-label="צרף מסמך">📎 צרף קובץ</button><label class="toggle"><input type="checkbox" id="agent" checked> מצב סוכן מחשב</label><button class="send" id="send" aria-label="שלח">↑</button></div></div></div></main><aside id="artifactPanel" class="artifact-panel" hidden><div class="artifact-heading"><strong id="artifactTitle">תצוגת תוצר</strong><button id="closeArtifact" aria-label="סגור תצוגה">×</button></div><div id="artifactContent"></div></aside></div>
 <div id="toastArea" class="toast-area" role="status" aria-live="polite"></div><dialog id="confirmDialog" aria-labelledby="confirmTitle"><h2 id="confirmTitle">אישור פעולה</h2><p id="confirmText"></p><div class="dialog-actions"><button id="confirmCancel">ביטול</button><button class="primary-action" id="confirmAccept">אישור</button></div></dialog><dialog id="modal"><h2 id="modalTitle"></h2><div id="modalBody"></div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:15px"><button id="close">סגור</button></div></dialog>
 <script src="qrc:///qtwebchannel/qwebchannel.js"></script><script>
 let bridge=null;let working=false;
-const $=id=>document.getElementById(id);
+const $=id=>document.getElementById(id);\n$('closeArtifact').onclick=()=>$('artifactPanel').hidden=true;
 function notify(message,kind='info'){
  const item=document.createElement('div');item.className='toast '+kind;
  const label=document.createElement('span');label.textContent=String(message);item.append(label);
@@ -70,11 +71,56 @@ function askConfirm(message){return new Promise(resolve=>{
 function call(method,...args){return new Promise((resolve,reject)=>{if(!bridge)return reject(Error("החיבור למחשב אינו זמין"));bridge[method](...args,r=>{try{if(typeof r!=='string'||!r.trim())throw Error('הפעולה לא החזירה תשובה. נסה לעדכן את התוכנה.');const data=JSON.parse(r);if(data.error)reject(Error(data.error));else resolve(data)}catch(e){reject(e)}})})}
 function status(value){$('state').textContent=value}
 function activity(value,running=false){$('activityText').textContent=value;$('activity').classList.toggle('running',running)}
+function renderMarkdown(target,source){
+ const lines=String(source).split('\\n');
+ let i=0;
+ while(i<lines.length){
+  const line=lines[i];
+  if(/^\x60\x60\x60/.test(line)){
+   const language=line.slice(3).trim().toLowerCase();const content=[];
+   i++;while(i<lines.length&&!/^\x60\x60\x60/.test(lines[i]))content.push(lines[i++]);
+   if(i<lines.length)i++;
+   const wrapper=element('div','',target);wrapper.className='code-block';
+   const header=element('div',language||'קוד',wrapper);header.className='code-header';
+   const copy=element('button','העתק קוד',header);
+   copy.onclick=()=>navigator.clipboard.writeText(content.join('\\n')).then(()=>notify('הקוד הועתק','success')).catch(()=>notify('ההעתקה נכשלה','error'));
+   if(['html','htm'].includes(language)){
+    const preview=element('button','תצוגת HTML',header);
+    preview.onclick=()=>showArtifact('תצוגת HTML',content.join('\\n'),'html');
+   }
+   const pre=element('pre','',wrapper);const code=element('code',content.join('\\n'),pre);code.dir='ltr';
+   continue;
+  }
+  if(line.includes('|')&&i+1<lines.length&&/^\\s*\\|?[-:| ]+\\|?\\s*$/.test(lines[i+1])){
+   const table=element('table','',target);table.className='md-table';
+   const parse=row=>row.trim().replace(/^\\||\\|$/g,'').split('|').map(x=>x.trim());
+   const heads=parse(line);const tr=element('tr','',table);
+   heads.forEach(x=>element('th',x,tr));i+=2;
+   while(i<lines.length&&lines[i].includes('|')){const row=element('tr','',table);parse(lines[i++]).forEach(x=>element('td',x,row))}
+   continue;
+  }
+  const p=element('div',line||' ',target);
+  p.className='markdown-line';
+  if(/^#{1,4} /.test(line)){p.classList.add('markdown-heading');p.textContent=line.replace(/^#{1,4} /,'')}
+  i++;
+ }
+}
+function showArtifact(title,content,type='text'){
+ const panel=$('artifactPanel');panel.hidden=false;
+ $('artifactTitle').textContent=title;
+ const contentBox=$('artifactContent');contentBox.replaceChildren();
+ if(type==='html'){
+  const frame=document.createElement('iframe');frame.setAttribute('sandbox','');
+  frame.setAttribute('referrerpolicy','no-referrer');
+  frame.srcdoc='<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src data:">'+content;
+  contentBox.append(frame);
+ }else{const pre=element('pre',content,contentBox);pre.dir='auto'}
+}
 function addMessage(role,text,index=null){
  const thread=$('thread');thread.querySelector('.welcome')?.remove();
  const item=document.createElement('div');item.className='msg '+role;
  const label=document.createElement('div');label.className='label';label.textContent=role==='user'?'אתה':role==='assistant'?'ChatGPT':'מערכת';
- const content=document.createElement('div');content.textContent=text;item.append(label,content);
+ const content=document.createElement('div');renderMarkdown(content,text);item.append(label,content);
  if(role==='user'&&Number.isInteger(index)){
   const edit=element('button','✎ ערוך ושלח מחדש',item);edit.className='small-action';
   edit.onclick=async()=>{
