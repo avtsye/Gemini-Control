@@ -21,7 +21,7 @@ CAPABILITIES = [
  ("video_edit","וידאו וכתוביות","partial",["media_engines","probe_media","convert_media"]),
  ("browser_control","שליטה בדפדפן","partial",["open_browser","click","type_text"]),
  ("web_research","חיפוש וסיכום אתרים","partial",["fetch_page"]),
- ("downloads","הורדות","missing",[]),
+ ("downloads","הורדות","partial",["download_file"]),
  ("browser_forms","מילוי טפסים","partial",["inspect_window","activate_control","set_control_text"]),
  ("external_api","API חיצוני","partial",["fetch_page"]),
  ("project_generation","יצירת פרויקטים","partial",["project_file"]),
