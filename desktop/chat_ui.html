@@ -199,6 +199,10 @@ async function capabilityWorkshop(){
  const description=document.createElement('textarea');description.placeholder='למשל: צור קובץ WAV של מנגינה לפי תווים ותדרים';description.style.border='1px solid #bbb';body.append(description);
  const create=element('button','צור קוד הרחבה לבדיקה',body);
  create.onclick=()=>call('generate_capability',description.value,$('models').value).then(()=>notify('יוצר טיוטת יכולת…')).catch(e=>notify(e.message,'error'));
+ const importButton=element('button','ייבא תוסף מחבילת ZIP',body);
+ importButton.onclick=async()=>{
+  try{const result=await call('import_capability');if(result.id){notify('התוסף יובא כטיוטה','success');inspectCapability(result.id)}}catch(e){notify(e.message,'error')}
+ };
  element('h3','קטלוג תוספים מובנה',body);
  element('p','התוספים נשמרים כטיוטות וזקוקים לבדיקה ואישור לפני הפעלה.',body);
  const builtin=await call('builtin_catalog');
@@ -213,6 +217,15 @@ async function capabilityWorkshop(){
  for(const item of data.items){
    element('h3',item.name+' ('+item.status+')',body);
    element('p',item.description||'',body);
+   const exportButton=element('button','שתף / ייצא ZIP',body);
+   exportButton.onclick=()=>call('export_capability',item.id).then(x=>{if(x.exported)notify('חבילת התוסף נשמרה','success')}).catch(e=>notify(e.message,'error'));
+   if(item.status!=='enabled'){
+    const remove=element('button','הסר תוסף וקבצים',body);
+    remove.onclick=async()=>{
+     if(!await askConfirm('למחוק לצמיתות את קוד התוסף ואת כל תוצריו? הפעולה אינה הפיכה.'))return;
+     try{await call('remove_capability',item.id,true);notify('התוסף הוסר','success');capabilityWorkshop()}catch(e){notify(e.message,'error')}
+    };
+   }
    const inspect=element('button','בדוק את קוד ההרחבה',body);
    inspect.onclick=()=>inspectCapability(item.id);
    if(item.status==='enabled'){
