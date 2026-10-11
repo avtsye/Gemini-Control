@@ -36,6 +36,11 @@ class DesktopAgent:
             if tool == "create_zip":
                 return create_zip(self.workspace,args.get("sources"),args.get("target"),self.approval)
             return extract_zip(self.workspace,args.get("archive"),args.get("destination"),self.approval)
+        if tool in {"create_spreadsheet","create_presentation"}:
+            from office_tools import create_spreadsheet,create_presentation
+            if tool=="create_spreadsheet":
+                return create_spreadsheet(self.workspace,args.get("name"),args.get("sheets"),self.approval)
+            return create_presentation(self.workspace,args.get("name"),args.get("slides"),self.approval)
         if tool=="create_pdf":
             from pdf_tool import create_pdf
             return create_pdf(args.get("name"),args.get("content"),self.workspace,
