@@ -89,13 +89,18 @@ chrome.runtime.onMessage.addListener((message,sender,sendResponse)=>{
  (async()=>{
   if(!sender.tab?.url?.startsWith('https://gemini.google.com/'))throw Error('מקור לא מורשה');
   const a=message.action;
-  if(!a||a.version!==1||!['question','open_app','drawing_svg','draw_paint'].includes(a.type))throw Error('פורמט לא נתמך');
+  if(!a||a.version!==1||!['question','open_app','drawing_svg','draw_paint','write_file'].includes(a.type))throw Error('פורמט לא נתמך');
   const result={version:1,type:a.type,description:String(a.description||'').slice(0,400)};
   if(a.type==='open_app'){
    if(!['notepad','calculator','explorer','paint'].includes(a.app))throw Error('תוכנה לא מורשית');
    result.app=a.app;
   }
   if(a.type==='question')result.question=String(a.question||'איזו תוכנה תרצה להשתמש?').slice(0,500);
+  if(a.type==='write_file'){
+   if(typeof a.name!=='string'||!(/^[\w .-]{1,100}\.(txt|md|json|csv|html|css|js|ts|py)$/i).test(a.name)||a.name.startsWith('.'))throw Error('שם קובץ לא נתמך');
+   if(typeof a.content!=='string'||a.content.length>50000)throw Error('תוכן קובץ לא תקין');
+   result.name=a.name;result.content=a.content;
+  }
   if(a.type==='draw_paint'){
    if(!Array.isArray(a.shapes)||a.shapes.length<1||a.shapes.length>80)throw Error('רשימת צורות לא תקינה');
    const allowed=['rect','ellipse','line','triangle'];
