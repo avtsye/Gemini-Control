@@ -34,6 +34,46 @@ body.theme-dark{color-scheme:dark;--bg:#171b22;--sidebar:#1f2630;--text:#e6eaf0;
 .permission-row{display:flex;gap:8px;align-items:center;padding:6px 3px;border-bottom:1px solid var(--border)}.permission-row[hidden]{display:none}
 .activity-entry{padding:8px;border-bottom:1px solid var(--border);line-height:1.6}
 .builtin-card{padding:12px;margin:8px 0;border:1px solid var(--border);border-radius:12px}.builtin-card p{margin:5px 0;color:var(--muted)}.builtin-card button{border:1px solid var(--border)}
+
+/* Responsive navigation: no action may be covered by another button. */
+.shell{min-width:0}
+.side{height:100dvh;min-height:0;flex-shrink:0;overflow:hidden}
+.side-actions{flex:0 1 auto;min-height:0;max-height:42vh;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable}
+#chats{min-height:64px;scrollbar-gutter:stable}
+.toolbar{height:auto;min-height:58px;max-height:152px;min-width:0;flex-wrap:wrap;align-content:center;justify-content:flex-start;gap:6px;padding:8px 12px;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable}
+.toolbar .name{margin-left:auto;flex:0 1 auto;white-space:nowrap}
+.toolbar .pill,.toolbar select{flex:0 0 auto;max-width:min(210px,100%);white-space:nowrap}
+#state{flex:0 1 190px;min-width:90px}
+.main{min-height:0;overflow:hidden}
+.messages{min-height:0;overscroll-behavior:contain}
+.composer-wrap{flex:0 0 auto;min-width:0;padding:8px 16px 12px}
+.composer{min-width:0}
+.compose-actions{flex-wrap:wrap;justify-content:flex-start;gap:7px}
+.compose-actions .send{margin-inline-start:auto;flex-shrink:0}
+dialog{max-width:min(760px,calc(100vw - 30px));width:min(710px,calc(100vw - 30px));max-height:calc(100dvh - 32px);overflow:auto;overscroll-behavior:contain}
+#modalBody{min-width:0;max-height:calc(100dvh - 170px);overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable}
+#modalBody>*{max-width:100%}
+#modalBody input,#modalBody textarea,#modalBody select{max-width:100%;min-width:0}
+.builtin-card{min-width:0;overflow-wrap:anywhere}
+.builtin-card button,.dialog-actions button{white-space:normal}
+.code-header{flex-wrap:wrap}
+.artifact-panel{min-width:0;min-height:0}
+@media(max-width:1050px){
+ .side{width:220px;min-width:190px;padding:10px 8px}
+ .side-actions{max-height:38vh}
+ .toolbar{max-height:160px;padding:6px 8px}
+ .toolbar .name{font-size:13px}
+}
+@media(max-width:720px){
+ .side{width:168px;min-width:145px;padding:8px 5px}
+ .side-actions{max-height:36vh}
+ .toolbar{max-height:190px}
+ .toolbar .name{display:none}
+ .messages{padding:10px}
+ .composer-wrap{padding:7px}
+ .composer{padding:9px}
+ .artifact-panel{position:fixed;z-index:40;inset:0;width:100%;max-width:100%;box-shadow:0 0 20px #0003}
+}
 </style></head><body><div class="shell">
 <aside class="side"><div class="brand">AI Control</div><button class="item" id="new">＋ שיחה חדשה</button><div class="section">השיחות שלך</div><input id="chatSearch" placeholder="חיפוש בכל השיחות..." aria-label="חיפוש בשיחות"><button class="item" id="backupChats">↓ גיבוי שיחות ל־JSON</button><button class="item" id="restoreChats">↑ שחזור שיחות מגיבוי</button><div id="chats"></div><div class="side-actions"><button class="item" id="toolsCatalog">☷ כלים זמינים לסוכן</button><button class="item" id="toolSecurity">♧ הרשאות כלים</button><button class="item" id="health">♡ אבחון מערכת</button><button class="item" id="reminders">◷ תזכורות מתוזמנות</button><button class="item" id="agentSchedules">◴ משימות סוכן מתוזמנות</button><button class="item" id="capabilities">✦ סדנת יכולות חדשות</button><button class="item" id="extensions">◈ הרחבות</button><button class="item" id="proposals">◇ הצעות לשיפור</button><button class="item" id="delete">⌫ מחק שיחה</button></div></aside>
 <main class="main"><div class="toolbar"><span class="name">AI Control Desktop</span><button class="pill" id="uiPrefs">⚙ מראה</button><button class="pill" id="account">החשבון שלי</button><button class="pill" id="login">התחבר ל־ChatGPT</button><select id="models" aria-label="מודל"></select><button class="pill" id="compareModels">⇄ השווה מודלים</button><button class="pill" id="parallelAnalysis">◈ צוות ניתוח</button><button class="pill" id="localAI">✧ AI מקומי</button><button class="pill" id="agentActivity">☷ פעילות הסוכן</button><button class="pill" id="stop">עצור סוכן</button><span id="state">לא מחובר</span></div>
