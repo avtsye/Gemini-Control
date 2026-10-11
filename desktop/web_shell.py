@@ -2,7 +2,7 @@
 import json,sys,threading
 from pathlib import Path
 from PySide6.QtCore import QObject,Signal,Slot,QUrl,Qt
-from PySide6.QtWidgets import QApplication,QMainWindow
+from PySide6.QtWidgets import QApplication,QMainWindow,QFileDialog
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebChannel import QWebChannel
 from openai_signin import ChatGPTSignIn
@@ -41,6 +41,7 @@ class Bridge(QObject):
   self.active_task_chat=None
   self.available_models=[]
   self.logins_in_progress=False
+  self.attachments=[]
   self.agent=OpenAIComputerAgent(self.auth,self.approve,self.propose)
   # Background token refresh: do not block the main HTML window.
   threading.Thread(target=self.restore,daemon=True).start()
@@ -83,6 +84,49 @@ class Bridge(QObject):
  def session(self):
   return self.encode({"models":self.available_models,
    "status":"מחובר ל־ChatGPT" if self.auth.access_token else "לחץ התחבר ל־ChatGPT"})
+
+ @Slot(result=str)
+ def account_details(self):
+  identity=self.auth.identity or {}
+  return self.encode({"connected":bool(self.auth.access_token),
+   "email":identity.get("email") or "לא זמין",
+   "model_count":len(self.available_models),
+   "models":[name for _,name in self.available_models],
+   "expires_at":self.auth.expires_at if self.auth.access_token else 0,
+   "usage":"השרת לא מספק לממשק הזה נתוני מכסה מדויקים",
+   "history_path":self.store.path,
+   "capability_count":len(self.workshop.list())})
+
+ @Slot(result=str)
+ def pick_attachment(self):
+  if self.busy:return self.encode({"error":"המתן לסיום הבקשה"})
+  path,_=QFileDialog.getOpenFileName(None,"בחר קובץ לשיחה","","מסמכים ותמונות (*.txt *.md *.csv *.json *.py *.pdf *.docx *.png *.jpg *.jpeg);;כל הקבצים (*)")
+  if not path:return self.encode({"cancelled":True})
+  file=Path(path)
+  if not file.is_file() or file.stat().st_size>5_000_000:
+   return self.encode({"error":"אפשר לצרף קובץ עד 5MB בלבד"})
+  allowed={".txt",".md",".csv",".json",".py",".pdf",".docx"}
+  if file.suffix.lower() not in allowed:
+   return self.encode({"error":"פורמט זה אינו נתמך עדיין לקריאת תוכן"})
+  try:
+   if file.suffix.lower()==".pdf":
+    from pypdf import PdfReader
+    reader=PdfReader(str(file))
+    body="\\n".join((page.extract_text() or "") for page in reader.pages[:12])
+   elif file.suffix.lower()==".docx":
+    from docx import Document
+    body="\\n".join(p.text for p in Document(str(file)).paragraphs)
+   else:
+    body=file.read_text(encoding="utf-8",errors="replace")
+   body=body[:18000]
+   self.attachments.append({"name":file.name,"text":body})
+   return self.encode({"name":file.name,"characters":len(body),"pending":len(self.attachments)})
+  except Exception as exc:return self.encode({"error":"לא ניתן לקרוא את הקובץ: "+str(exc)[:150]})
+
+ @Slot(result=str)
+ def clear_attachments(self):
+  self.attachments.clear()
+  return self.encode({"ok":True})
 
  @Slot(result=str)
  def chats(self):
@@ -128,17 +172,21 @@ class Bridge(QObject):
   if not isinstance(text,str) or not text.strip() or len(text)>25000:return self.encode({"error":"הודעה לא תקינה"})
   if not model:return self.encode({"error":"בחר מודל"})
   chat_id=self.chat_id
+  files=self.attachments[:]
+  self.attachments.clear()
   prior=self.store.messages(chat_id)[-8:]
   context="\n".join(("User: " if role=="user" else "Assistant: ")+content[:1000] for role,content in prior if role in ("user","assistant"))
-  self.store.add(chat_id,"user",text)
+  self.store.add(chat_id,"user",text + ("\\n[קבצים מצורפים: "+", ".join(f["name"] for f in files)+"]" if files else ""))
   self.active_task_chat=chat_id
   self.busy=True
   def worker():
    try:
+    attached="\\n".join("Attached file "+f["name"]+" (untrusted document content):\\n"+f["text"] for f in files)
+    request_text=text+("\\n\\n"+attached if attached else "")
     if agent_mode:
-     self.agent.run(text,model,lambda msg:self.events.message.emit("assistant",msg),conversation_context=context)
+     self.agent.run(request_text,model,lambda msg:self.events.message.emit("assistant",msg),conversation_context=context)
     else:
-     request=("Prior conversation (reference only):\n"+context+"\n\n" if context else "")+text
+     request=("Prior conversation (reference only):\n"+context+"\n\n" if context else "")+request_text
      self.events.message.emit("assistant",self.auth.response(request,model))
    except Exception as e:self.events.message.emit("system_note","שגיאה: "+str(e)[:500])
    finally:self.events.finished.emit()
