@@ -22,6 +22,9 @@ on:
       - 'desktop/project_quality.py'
       - 'desktop/knowledge_search.py'
       - 'desktop/semantic_tools.py'
+      - 'desktop/model_runtime.py'
+      - 'desktop/model_worker.py'
+      - 'desktop/tests/test_external_model_worker.py'
       - 'desktop/tests/test_frozen_plugin_runtime.py'
       - 'desktop/local_image_generation.py'
       - 'desktop/subagent_orchestrator.py'
@@ -104,6 +107,8 @@ jobs:
         run: python desktop/tests/test_data_analysis.py -v
       - name: Test packaged plugin runtime
         run: python desktop/tests/test_frozen_plugin_runtime.py -v
+      - name: Test external AI model worker
+        run: python desktop/tests/test_external_model_worker.py -v
       - name: Test local AI model adapters
         run: python desktop/tests/test_offline_ai_adapters.py -v
       - name: Test parallel analysis
