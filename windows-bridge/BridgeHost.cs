@@ -8,6 +8,7 @@ using System.Web.Script.Serialization;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Drawing.Drawing2D;
+using System.Runtime.InteropServices;
 
 class BridgeHost {
  static readonly JavaScriptSerializer Json=new JavaScriptSerializer();
@@ -82,6 +83,46 @@ class BridgeHost {
   }
   return new{id=id,ok=false,error="Unknown file operation"};
  }
+
+ [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern int GetWindowText(IntPtr h,StringBuilder sb,int cap);
+ [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
+ [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr h);
+ [DllImport("user32.dll")] static extern bool IsWindow(IntPtr h);
+ [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
+ [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h,out uint pid);
+ [DllImport("user32.dll")] static extern bool EnumWindows(EnumWindowProc callback,IntPtr state);
+ delegate bool EnumWindowProc(IntPtr h,IntPtr state);
+ static readonly Dictionary<string,string> AllowedProcesses=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase) {
+  {"notepad","notepad"},{"calculator","CalculatorApp"},{"explorer","explorer"},{"paint","mspaint"}
+ };
+ static string Title(IntPtr h){var sb=new StringBuilder(260);GetWindowText(h,sb,sb.Capacity);return sb.ToString();}
+ static bool AllowedWindow(IntPtr h){
+  if(h==IntPtr.Zero||!IsWindow(h)||!IsWindowVisible(h))return false;
+  uint pid;GetWindowThreadProcessId(h,out pid);
+  try{using(var p=Process.GetProcessById((int)pid)){foreach(var name in AllowedProcesses.Values)if(string.Equals(p.ProcessName,name,StringComparison.OrdinalIgnoreCase))return true;}}catch{}
+  return false;
+ }
+ static object Windows(object id){
+  var items=new List<object>();EnumWindows((h,x)=>{if(AllowedWindow(h)&&Title(h).Length>0&&items.Count<30)items.Add(new{handle=h.ToInt64().ToString(),title=Title(h)});return true;},IntPtr.Zero);
+  return new{id=id,ok=true,windows=items};
+ }
+ static object TypeText(IDictionary<string,object> data,object id){
+  string str=Str(data,"text");if(str.Length<1||str.Length>5000)throw new ArgumentException("Text length invalid");
+  long handle;if(!long.TryParse(Str(data,"handle"),out handle))throw new ArgumentException("Invalid window handle");
+  IntPtr h=new IntPtr(handle);
+  if(!AllowedWindow(h))throw new ArgumentException("Window not allowlisted or no longer exists");
+  // Require the user to have manually focused the chosen application.
+  if(GetForegroundWindow()!=h)return new{id=id,ok=false,error="Click the selected app window first, then approve again"};
+  // Clipboard paste is intentionally avoided to protect clipboard data.
+  foreach(char c in str){
+   if(c=='\r')continue;
+   if(c=='\n'){SendKeys.SendWait("{ENTER}");continue;}
+   if(char.IsControl(c))continue;
+   SendKeys.SendWait(c=='{'?"{{}":c=='}'?"{}}":c=='+ '?"{+}":c=='+'?"{+}":c=='^'?"{^}":c=='%'?"{%}":c=='~'?"{~}":c=='('?"{(}":c==')'?"{)}":c.ToString());
+  }
+  Audit("type_text","approved_window");return new{id=id,ok=true,message="Text sent to active approved application"};
+ }
+
  static object Handle(Dictionary<string,object> data){
   object id=Get(data,"id");string command=Str(data,"command");
   if(command=="ping"||command=="status")return new {id=id,ok=true,enabled=Enabled(),message="Gemini Control Bridge 0.3.0"};
@@ -89,6 +130,8 @@ class BridgeHost {
   if(command=="recent_log"){string[] lines=File.Exists(LogPath)?File.ReadAllLines(LogPath):new string[0];int start=Math.Max(0,lines.Length-30);var recent=new List<string>();for(int i=start;i<lines.Length;i++)recent.Add(lines[i]);return new{id=id,ok=true,lines=recent};}
   if(!Enabled())return new{id=id,ok=false,error="Bridge is disabled. Enable it in the control panel."};
   if(command=="list_apps")return new {id=id,ok=true,apps=new string[]{"notepad","calculator","explorer","paint"}};
+  if(command=="list_windows")return Windows(id);
+  if(command=="type_text")return TypeText(data,id);
   if(command=="list_files"||command=="read_file"||command=="write_file")return Files(data,id,command);
   if(command=="draw_paint"){Audit(command,"approved");return Draw(data,id);}
   if(command=="open_app"){
