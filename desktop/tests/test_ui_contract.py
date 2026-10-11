@@ -80,12 +80,11 @@ class UIContract(unittest.TestCase):
   self.assertIn("call('preview_attachment',index)",self.html)
   self.assertIn("content.kind==='image'",self.html)
  def test_narrow_screen_actions_remain_reachable(self):
-  import re
-  self.assertRegex(self.html,r"\\.side-actions\\{[^}]*overflow-y:auto")
-  self.assertRegex(self.html,r"\\.toolbar\\{[^}]*flex-wrap:wrap")
-  self.assertRegex(self.html,r"#modalBody\\{[^}]*overflow-y:auto")
-  self.assertRegex(self.html,r"\\.compose-actions\\{[^}]*flex-wrap:wrap")
-  self.assertRegex(self.html,r"@media\\(max-width:720px\\)")
+  self.assertIn("max-height:42vh;overflow-y:auto",self.html)
+  self.assertIn("max-height:152px;min-width:0;flex-wrap:wrap",self.html)
+  self.assertIn("#modalBody{min-width:0;max-height:",self.html)
+  self.assertIn(".compose-actions{flex-wrap:wrap",self.html)
+  self.assertIn("@media(max-width:720px)",self.html)
   self.assertIn('<details class="nav-details">',self.html)
   self.assertIn('<summary>ניהול ותוספים</summary>',self.html)
  def test_inline_javascript_syntax(self):
