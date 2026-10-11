@@ -273,7 +273,7 @@ class Bridge(QObject):
  def toggle_agent(self):
   self.agent.enabled=not self.agent.enabled
   self.agent.local.enabled=self.agent.enabled
-  return self.encode({"message":"הסוכן פעיל" if self.agent.enabled else "פעולות הסוכן מושבתות"})
+  return self.encode({"enabled":self.agent.enabled,"message":"הסוכן פעיל" if self.agent.enabled else "פעולות הסוכן מושבתות"})
  @Slot(str,bool,result=str)
  def resend_edited_message(self,model,agent_mode):
   if self.busy:return self.encode({"error":"משימה אחרת פעילה"})
