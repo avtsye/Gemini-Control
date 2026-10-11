@@ -75,6 +75,10 @@ class UIContract(unittest.TestCase):
   self.assertIn("document.createTextNode(",self.html)
   self.assertIn("noopener noreferrer",self.html)
   self.assertNotIn("innerHTML=",self.html)
+ def test_file_picker_preview_binding(self):
+  self.assertIn("def preview_attachment(self,index):",self.shell)
+  self.assertIn("call('preview_attachment',index)",self.html)
+  self.assertIn("content.kind==='image'",self.html)
  def test_inline_javascript_syntax(self):
   executable=shutil.which("node")
   if not executable:self.skipTest("Node.js is not installed")
