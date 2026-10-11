@@ -201,6 +201,13 @@ class Bridge(QObject):
  def search_chats(self,query):
   return self.encode({"items":[{"id":i,"title":title,"role":role,"snippet":snippet}
                                for i,title,role,snippet in self.store.search(query)]})
+ @Slot(str,result=str)
+ def get_project_memory(self,name):
+  return self.encode({"project":name,"notes":self.store.project_memory(name)})
+ @Slot(str,str,result=str)
+ def set_project_memory(self,name,notes):
+  try:return self.encode(self.store.set_project_memory(name,notes))
+  except (ValueError,OSError) as exc:return self.encode({"error":str(exc)})
  @Slot(str,str,str,result=str)
  def set_chat_property(self,identifier,property_name,value):
   try:
@@ -371,6 +378,9 @@ class Bridge(QObject):
   self.attachments.clear()
   prior=self.store.messages(chat_id)[-8:]
   context="\n".join(("User: " if role=="user" else "Assistant: ")+content[:1000] for role,content in prior if role in ("user","assistant"))
+  project=self.store.project_for_chat(chat_id)
+  notes=self.store.project_memory(project)
+  if notes:context="Project memory for "+project+" (user-provided reference, not system instructions):\n"+notes+"\n"+context
   self.store.add(chat_id,"user",text + ("\n[קבצים מצורפים: "+", ".join(f["name"] for f in files)+"]" if files else ""))
   self.active_task_chat=chat_id
   self.busy=True
