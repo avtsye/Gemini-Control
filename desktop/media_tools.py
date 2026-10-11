@@ -28,7 +28,7 @@ def probe_media(workspace,name,approve):
     try:
         result=subprocess.run([executable,"-v","error","-show_entries",
             "format=duration,size:stream=codec_name,codec_type,width,height",
-            "-of","json",str(src)],capture_output=True,text=True,timeout=20,shell=False)
+            "-of","json",str(src)],capture_output=True,text=True,encoding="utf-8",errors="replace",timeout=20,shell=False)
     except subprocess.TimeoutExpired:
         return {"error":"Media probing timed out"}
     if result.returncode:
@@ -56,7 +56,7 @@ def convert_media(workspace,source,target,approve):
         cmd+=["-vn"]
     cmd+=["-t","1800",str(temporary)]
     try:
-        result=subprocess.run(cmd,capture_output=True,text=True,timeout=180,shell=False)
+        result=subprocess.run(cmd,capture_output=True,text=True,encoding="utf-8",errors="replace",timeout=180,shell=False)
         if result.returncode:
             return {"error":"Conversion failed","details":result.stderr[-700:]}
         if not temporary.is_file():return {"error":"Output was not created"}
