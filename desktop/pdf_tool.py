@@ -37,7 +37,7 @@ def create_pdf(name, content, workspace, approve, direction="rtl"):
         return {"cancelled": True}
 
     from PySide6.QtCore import QMarginsF
-    from PySide6.QtGui import QFont, QPageSize, QTextDocument
+    from PySide6.QtGui import QFont, QPageSize, QPageLayout, QTextDocument
     from PySide6.QtPrintSupport import QPrinter
 
     paragraphs = content.splitlines()
@@ -62,7 +62,7 @@ def create_pdf(name, content, workspace, approve, direction="rtl"):
         printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
         printer.setOutputFileName(temp_path)
         printer.setPageSize(QPageSize(QPageSize.PageSizeId.A4))
-        printer.setPageMargins(QMarginsF(18, 18, 18, 18), QPageSize.Unit.Millimeter)
+        printer.setPageMargins(QMarginsF(18, 18, 18, 18), QPageLayout.Unit.Millimeter)
         document.print_(printer)
         with open(temp_path, "rb") as stream:
             if stream.read(5) != b"%PDF-":
