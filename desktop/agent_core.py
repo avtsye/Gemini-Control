@@ -24,6 +24,12 @@ class DesktopAgent:
         if not self.enabled:
             raise PermissionError("Agent is paused")
         args = arguments if isinstance(arguments, dict) else {}
+        if tool in {"image_model_status","generate_local_image"}:
+            from local_image_generation import image_model_status,generate_local_image
+            if tool=="image_model_status":
+                return image_model_status(self.workspace,args.get("model_folder"))
+            return generate_local_image(self.workspace,args.get("prompt"),args.get("model_folder"),
+                                        args.get("target"),self.approval,args.get("steps",20))
         if tool in {"embedding_status","build_semantic_index","semantic_search"}:
             from semantic_tools import embedding_status,build_semantic_index,semantic_search
             if tool=="embedding_status":
