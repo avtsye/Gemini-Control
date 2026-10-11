@@ -8,13 +8,13 @@ The primary Windows EXE now uses **OpenAI's official open-source Sign in with Ch
 - Model list loaded using the authorized account; user selects a listed model.
 - Responses API inference uses the user's explicitly authorized ChatGPT plan via an OAuth bearer credential with `store:false`, `stream:true`; incomplete responses are treated as failures.
 - Application interface in Hebrew RTL with authentication, chat and errors.
-- Credentials are **kept in RAM only** for this preview. Restarting requires a new sign-in. Host ID remains on the machine. The app does not access ChatGPT's existing conversations or memory.
+- Credentials are **kept in RAM only** for this preview. Restarting requires a new sign-in. Host ID remains on the machine. The app does not access ChatGPT's existing conversations or memory. The non-secret client registration and host ID are saved locally so the same registered client can be reused; access tokens are not stored.
 - Old Gemini code remains in the repository for reference, but is no longer the default EXE entry point.
 
 ## Important limitations
 **This initial release validates the account integration and chat only. It does not yet execute the AI's computer instructions.** The prior allowlisted file/app operations remain available in `desktop/agent_core.py`, and a permissioned tool-call adapter can be added after authenticated chat is verified.
 
-ChatGPT plan usage is subject to eligibility and usage limits. No additional API key is needed; the app does consume **eligible plan usage**, and should not be described as unlimited or zero-usage. If sign-in is denied, do not pretend it succeeded or fall back to paid API calls.
+ChatGPT plan usage is subject to eligibility and usage limits. Official plan usage draws from included ChatGPT Work/Codex usage where applicable; it is not a way around those limits. No additional API key is needed; the app does consume **eligible plan usage**, and should not be described as unlimited or zero-usage. If sign-in is denied, do not pretend it succeeded or fall back to paid API calls.
 
 The embedded Gemini site is not used in this variant. No HTTPS verification bypasses are enabled; on filtered networks configure the official trusted local root certificate instead.
 
