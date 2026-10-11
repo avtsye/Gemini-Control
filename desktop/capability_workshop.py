@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import hashlib
+import importlib.util
 import shutil
 import venv
 import re
@@ -92,6 +93,23 @@ class CapabilityWorkshop:
         meta["status"]="disabled"
         self._write_manifest(folder,meta)
         return {"dependencies":packages,"installed":False}
+
+    def analyze_dependencies(self,identifier):
+        info=self.inspect(identifier)
+        import sys as _sys
+        available=[]
+        missing=[]
+        for module in info["imports"]:
+            root=module.split(".")[0]
+            if not root:continue
+            if root in _sys.stdlib_module_names or importlib.util.find_spec(root) is not None:
+                available.append(module)
+            else:
+                missing.append(module)
+        return {"available":sorted(set(available)),
+                "missing":sorted(set(missing)),
+                "declared":self._manifest(self._path(identifier)).get("dependencies",[]),
+                "note":"Import names are not necessarily PyPI distribution names."}
 
     def dependency_status(self,identifier):
         folder=self._path(identifier)
@@ -240,6 +258,7 @@ class CapabilityWorkshop:
         folder=self._path(identifier)
         info=self.inspect(identifier)
         if info["status"]!="enabled":raise PermissionError("Capability is not enabled")
+        if info["findings"]:raise PermissionError("Sensitive imports blocked")
         if not isinstance(payload,dict) or len(json.dumps(payload,ensure_ascii=False))>MAX_INPUT:
             raise ValueError("Invalid input")
         if not approve("להריץ קוד Python של הרחבת צד שלישי? קוד זה פועל בהרשאות המשתמש ואינו מבודד אבטחתית."):
