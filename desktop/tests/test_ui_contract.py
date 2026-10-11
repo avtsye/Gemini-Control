@@ -28,6 +28,15 @@ class UIContract(unittest.TestCase):
   methods=set(re.findall(r"call\('([a-z_]+)'",self.html))
   decorators=set(re.findall(r"@Slot\([^\n]*?result=str\)\s+def ([a-z_]+)\(",self.shell))
   self.assertFalse(methods-decorators,"Undeclared Qt bridge methods: "+str(methods-decorators))
+ def test_qt_slots_not_shadowed_by_attributes(self):
+  self.assertNotIn("self.extensions=ExtensionManager()",self.shell)
+  self.assertIn("self.extension_manager=ExtensionManager()",self.shell)
+  self.assertIn("def extensions(self):",self.shell)
+ def test_native_js_alerts_removed(self):
+  self.assertNotIn("alert(",self.html)
+  self.assertNotIn("confirm(",self.html)
+  self.assertIn("id=\"toastArea\"",self.html)
+  self.assertIn("id=\"confirmDialog\"",self.html)
  def test_qt_bridge_signal_name(self):
   self.assertIn('registerObject("api",self.bridge)',self.shell)
   self.assertIn("bridge.event.connect(",self.html)
