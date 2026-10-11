@@ -51,7 +51,7 @@ def search_knowledge(workspace,query,folder,approve,limit=8):
             lower=body.casefold()
             positions=[lower.find(t) for t in terms if lower.find(t)>=0]
             pivot=max(0,min(positions)-90) if positions else 0
-            scored.append({"file":str(path.relative_to(Path(workspace).resolve())),
+            scored.append({"file":path.relative_to(Path(workspace).resolve()).as_posix(),
                            "score":round(score,6),
                            "excerpt":body[pivot:pivot+420]})
     scored.sort(key=lambda x:(-x["score"],x["file"]))
