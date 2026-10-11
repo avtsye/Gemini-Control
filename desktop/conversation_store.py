@@ -27,6 +27,10 @@ class ConversationStore:
                     created TEXT NOT NULL);
                 CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages(conversation_id,id);
             """)
+            db.execute("""CREATE TABLE IF NOT EXISTS conversation_flags (
+                conversation_id TEXT PRIMARY KEY, pinned INTEGER NOT NULL DEFAULT 0,
+                archived INTEGER NOT NULL DEFAULT 0, project TEXT NOT NULL DEFAULT '',
+                FOREIGN KEY(conversation_id) REFERENCES conversations(id))""")
     @contextmanager
     def _db(self):
         db=sqlite3.connect(self.path,timeout=10)
@@ -46,6 +50,37 @@ class ConversationStore:
     def chats(self):
         with self._db() as db:
             return db.execute("SELECT id,title FROM conversations ORDER BY updated DESC").fetchall()
+    def search(self,query,limit=100):
+        if not isinstance(query,str) or not query.strip() or len(query)>200:
+            return []
+        with self._db() as db:
+            return db.execute("""SELECT c.id,c.title,m.role,substr(m.content,1,350)
+                FROM messages m JOIN conversations c ON c.id=m.conversation_id
+                WHERE instr(lower(m.content),lower(?))>0
+                ORDER BY m.id DESC LIMIT ?""",(query,min(limit,200))).fetchall()
+    def set_flags(self,chat_id,pinned=None,archived=None,project=None):
+        if project is not None and (not isinstance(project,str) or len(project)>80):
+            raise ValueError("Invalid project")
+        with self._db() as db:
+            if not db.execute("SELECT 1 FROM conversations WHERE id=?",(chat_id,)).fetchone():
+                raise ValueError("Unknown conversation")
+            db.execute("INSERT OR IGNORE INTO conversation_flags(conversation_id) VALUES(?)",(chat_id,))
+            for field,value in (("pinned",pinned),("archived",archived),("project",project)):
+                if value is not None:
+                    db.execute("UPDATE conversation_flags SET "+field+"=? WHERE conversation_id=?",
+                               ((str(value) if field=="project" else int(bool(value))),chat_id))
+    def chats_detailed(self):
+        with self._db() as db:
+            return db.execute("""SELECT c.id,c.title,COALESCE(f.pinned,0),COALESCE(f.archived,0),
+                        COALESCE(f.project,'')
+                FROM conversations c LEFT JOIN conversation_flags f ON c.id=f.conversation_id
+                ORDER BY COALESCE(f.pinned,0) DESC,c.updated DESC""").fetchall()
+    def export_history(self):
+        with self._db() as db:
+            conversations=db.execute("SELECT id,title,created,updated FROM conversations").fetchall()
+            messages=db.execute("SELECT conversation_id,role,content,created FROM messages ORDER BY id").fetchall()
+            flags=self.chats_detailed()
+        return {"version":1,"conversations":conversations,"messages":messages,"flags":flags}
     def messages(self,chat_id):
         with self._db() as db:
             return db.execute("SELECT role,content FROM messages WHERE conversation_id=? ORDER BY id",(chat_id,)).fetchall()
@@ -62,8 +97,19 @@ class ConversationStore:
                     db.execute("UPDATE conversations SET title=? WHERE id=?",(content.replace("\n"," ")[:65],chat_id))
             db.execute("UPDATE conversations SET updated=? WHERE id=?",(timestamp,chat_id))
             return cursor.lastrowid
+    def edit_user_message(self,chat_id,index,new_text):
+        if not isinstance(new_text,str) or not new_text.strip() or len(new_text)>25000:
+            raise ValueError("Invalid edited message")
+        if not isinstance(index,int) or index<0:raise ValueError("Invalid index")
+        with self._db() as db:
+            rows=db.execute("SELECT id,role FROM messages WHERE conversation_id=? ORDER BY id",(chat_id,)).fetchall()
+            if index>=len(rows) or rows[index][1]!="user":raise ValueError("Only user messages may be edited")
+            db.execute("UPDATE messages SET content=? WHERE id=?",(new_text,rows[index][0]))
+            db.execute("DELETE FROM messages WHERE conversation_id=? AND id>?",(chat_id,rows[index][0]))
+            db.execute("UPDATE conversations SET updated=? WHERE id=?",(datetime.now(timezone.utc).isoformat(),chat_id))
     def delete(self,chat_id):
         with self._db() as db:
+            db.execute("DELETE FROM conversation_flags WHERE conversation_id=?",(chat_id,))
             db.execute("DELETE FROM messages WHERE conversation_id=?",(chat_id,))
             db.execute("DELETE FROM proposals WHERE conversation_id=?",(chat_id,))
             db.execute("DELETE FROM conversations WHERE id=?",(chat_id,))
