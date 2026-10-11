@@ -71,7 +71,9 @@ class UIContract(unittest.TestCase):
   self.assertIn("bridge.event.connect(",self.html)
  def test_secure_html_messages(self):
   self.assertIn("renderMarkdown(content,text)",self.html)
-  self.assertIn("p.textContent=line.replace",self.html)
+  self.assertIn("function renderInlineMarkdown(target,value)",self.html)
+  self.assertIn("document.createTextNode(",self.html)
+  self.assertIn("noopener noreferrer",self.html)
   self.assertNotIn("innerHTML=",self.html)
  def test_source_python_syntax(self):
   for path in ROOT.glob("*.py"):
