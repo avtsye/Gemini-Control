@@ -2,9 +2,10 @@
 No API key, browser scraping, or disabled TLS verification.
 Access tokens remain in memory for this first version (sign in again after restart).
 """
-import base64, hashlib, json, secrets, threading, uuid, webbrowser
+import base64, hashlib, json, secrets, threading, uuid, webbrowser, os
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlencode, urlparse, parse_qs
+from pathlib import Path
 import requests
 import jwt
 from jwt import PyJWKClient
@@ -24,7 +25,15 @@ class ChatGPTSignIn:
         self.identity=None
         self.client_id=None
         self.scopes=set()
-        self.host_id="urn:uuid:"+str(uuid.uuid4())
+        directory=Path(os.environ.get("LOCALAPPDATA",Path.home()/".config"))/"GeminiControl"
+        directory.mkdir(parents=True,exist_ok=True)
+        host_path=directory/"host-id"
+        try:
+            value=str(uuid.UUID(host_path.read_text(encoding="utf-8").strip()))
+        except (ValueError,OSError):
+            value=str(uuid.uuid4())
+            host_path.write_text(value,encoding="utf-8")
+        self.host_id="urn:uuid:"+value
 
     def sign_in(self, timeout=180):
         """Blocking method: run in a worker, never on Qt UI thread."""
@@ -99,13 +108,35 @@ class ChatGPTSignIn:
         self.scopes=scopes
         return self.identity
 
-    def response(self, prompt,model="gpt-5.6"):
+    def models(self):
+        if not self.access_token: raise SignInError("Not authenticated")
+        response=requests.get(RESOURCE+"/models",
+            headers={"Authorization":"Bearer "+self.access_token},timeout=25)
+        response.raise_for_status()
+        data=response.json()
+        return [(m["slug"],m.get("display_name",m["slug"]))
+                for m in data.get("models",[]) if m.get("visibility")=="list" and m.get("slug")]
+
+    def response(self, prompt,model):
         if not self.access_token:raise SignInError("תחילה יש להתחבר עם ChatGPT")
-        r=requests.post(RESOURCE+"/responses",
+        chunks=[]
+        completed=False
+        with requests.post(RESOURCE+"/responses",
             headers={"Authorization":"Bearer "+self.access_token,"Content-Type":"application/json"},
-            json={"model":model,"input":prompt,"store":False,"stream":False},
-            timeout=90)
-        if not r.ok:raise SignInError("Responses error HTTP "+str(r.status_code)+": "+r.text[:350])
-        data=r.json()
-        return "\n".join(c.get("text","") for item in data.get("output",[])
-            for c in item.get("content",[]) if c.get("type")=="output_text")
+            json={"model":model,"input":[{"role":"user","content":prompt}],"store":False,"stream":True},
+            stream=True,timeout=90) as r:
+            if not r.ok:
+                raise SignInError("Responses error HTTP "+str(r.status_code)+": "+r.text[:350])
+            for line in r.iter_lines(decode_unicode=True):
+                if not line or not line.startswith("data: "):continue
+                try: event=json.loads(line[6:])
+                except ValueError:continue
+                kind=event.get("type")
+                if kind=="response.output_text.delta":
+                    chunks.append(event.get("delta",""))
+                elif kind in ("response.failed","response.incomplete"):
+                    raise SignInError("Response did not complete: "+kind)
+                elif kind=="response.completed":
+                    completed=True
+        if not completed: raise SignInError("Connection ended before response.completed")
+        return "".join(chunks)
