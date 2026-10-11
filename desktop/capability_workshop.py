@@ -109,6 +109,32 @@ class CapabilityWorkshop:
         if not env.exists():venv.EnvBuilder(with_pip=True,clear=False).create(str(env))
         return self.dependency_status(identifier)
 
+    def install_dependencies(self,identifier,approve,timeout=120):
+        folder=self._path(identifier)
+        meta=self._manifest(folder)
+        packages=meta.get("dependencies",[])
+        if not packages:
+            return {"installed":True,"packages":[]}
+        if not callable(approve) or not approve(
+            "להוריד ולהתקין חבילות Python חיצוניות לתוך סביבה נפרדת? "
+            "תהליך התקנת חבילות אינו מבודד אבטחתית ועלול להריץ קוד. "
+            "חבילות: "+", ".join(packages)):
+            return {"cancelled":True}
+        env=folder/"venv"
+        if not env.exists():
+            venv.EnvBuilder(with_pip=True).create(str(env))
+        python=env/("Scripts/python.exe" if os.name=="nt" else "bin/python")
+        cmd=[str(python),"-m","pip","--isolated","install","--disable-pip-version-check",
+             "--no-input","--only-binary=:all:","--"]+packages
+        try:
+            outcome=subprocess.run(cmd,capture_output=True,text=True,timeout=timeout,
+                                   cwd=str(folder),shell=False)
+        except subprocess.TimeoutExpired:
+            return {"error":"Package installation timed out"}
+        if outcome.returncode:
+            return {"error":"Package installation failed","details":outcome.stderr[-1200:]}
+        return {"installed":True,"packages":packages}
+
     def draft(self,name,description,source):
         if not isinstance(name,str) or not 1<=len(name)<=80:raise ValueError("Invalid name")
         source=self._validate(source)
