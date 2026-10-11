@@ -125,9 +125,8 @@ def computer_action(name, args, workspace, approve):
             raise ValueError("File unavailable in workspace")
         ext=target.suffix.lower()
         if name=="open_workspace_file":
-            forbidden={".exe",".bat",".cmd",".ps1",".vbs",".js",".jar",".msi",
-                       ".scr",".com",".lnk",".url",".hta",".reg",".dll",".sys",".wsf"}
-            if ext in forbidden:raise ValueError("Executable or shortcut files cannot be launched")
+            safe_documents={".txt",".md",".pdf",".docx",".xlsx",".csv",".png",".jpg",".jpeg",".gif",".bmp",".webp",".rtf",".odt",".ods",".pptx"}
+            if ext not in safe_documents:raise ValueError("Only non-executable document formats can be opened")
             if (cancel:=_consent(approve,"לפתוח במחשב את הקובץ "+rel+" באמצעות יישום ברירת המחדל?")):return cancel
             os.startfile(str(target))
             return {"opened_file":rel}
