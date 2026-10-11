@@ -33,4 +33,14 @@ class ToolsTests(unittest.TestCase):
   self.assertEqual(list(pathlib.Path(self.tmp.name).iterdir()),[])
  def test_browser_rejects_http(self):
   with self.assertRaises(ValueError):self.action("open_browser",{"url":"http://example.com"},True)
+ def test_project_file_creates_nested_code(self):
+  result=self.action("project_file",{"project":"AppOne","path":"src/main.py","content":"print('ok')"},True)
+  self.assertTrue(pathlib.Path(result["saved_project_file"]).exists())
+ def test_project_rejects_escape(self):
+  for name in ("../private.py","src/../../secret.py","src/.hidden.py"):
+   with self.assertRaises(ValueError):self.action("project_file",{"project":"AppOne","path":name,"content":"x"},True)
+ def test_project_denied(self):
+  result=self.action("project_file",{"project":"AppOne","path":"src/main.py","content":"x"})
+  self.assertEqual(result,{"cancelled":True})
+  self.assertFalse((pathlib.Path(self.tmp.name)/"Projects").exists())
 if __name__=="__main__":unittest.main()
