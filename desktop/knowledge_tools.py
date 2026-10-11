@@ -5,6 +5,7 @@ All indexed content remains on disk until a user-approved search sends snippets 
 """
 import re
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 EXTENSIONS={".txt",".md",".csv",".json",".py",".html",".css",".js"}
@@ -30,10 +31,11 @@ def index_workspace(workspace,approve):
         if not resolved.is_relative_to(root) or path.stat().st_size>MAX_BYTES:continue
         text=path.read_text(encoding="utf-8",errors="replace")
         items.append((str(path.relative_to(root)),text[:MAX_BYTES]))
-    with sqlite3.connect(_db_path(workspace)) as db:
+    with closing(sqlite3.connect(_db_path(workspace))) as db:
         db.execute("CREATE VIRTUAL TABLE IF NOT EXISTS documents USING fts5(path UNINDEXED, body, tokenize='unicode61')")
         db.execute("DELETE FROM documents")
         db.executemany("INSERT INTO documents(path,body) VALUES(?,?)",items)
+        db.commit()
     return {"indexed_files":len(items),"index":"local"}
 
 def search_knowledge(workspace,query,approve,limit=10):
@@ -46,7 +48,7 @@ def search_knowledge(workspace,query,approve,limit=10):
     target=_db_path(workspace)
     if not target.is_file():return {"error":"Index missing; run index_workspace first"}
     expression=" OR ".join('"'+word.replace('"','')+'"' for word in words)
-    with sqlite3.connect(target) as db:
+    with closing(sqlite3.connect(target)) as db:
         rows=db.execute("""SELECT path,snippet(documents,1,'[',']',' … ',24)
             FROM documents WHERE documents MATCH ? ORDER BY bm25(documents) LIMIT ?""",
             (expression,max(1,min(int(limit),30)))).fetchall()
