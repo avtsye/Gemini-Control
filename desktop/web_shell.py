@@ -34,6 +34,7 @@ class Bridge(QObject):
   self._wait=threading.Event()
   self._allowed=False
   self.busy=False
+  self.available_models=[]
   self.agent=OpenAIComputerAgent(self.auth,self.approve,self.propose)
   # Background token refresh: do not block the main HTML window.
   threading.Thread(target=self.restore,daemon=True).start()
@@ -48,6 +49,7 @@ class Bridge(QObject):
   except Exception as e:self.events.status.emit("לא ניתן לשחזר התחברות: "+str(e)[:100])
  def on_models(self,data):
   models,label=data
+  self.available_models=models
   self.emit("models",models=models,status=label)
  def on_message(self,role,message):
   self.store.add(self.chat_id,role,message)
@@ -66,6 +68,11 @@ class Bridge(QObject):
   self._wait.set()
  def propose(self,description,steps):
   return self.store.propose(self.chat_id,description,steps)
+ @Slot(result=str)
+ def session(self):
+  return self.encode({"models":self.available_models,
+   "status":"מחובר ל־ChatGPT" if self.auth.access_token else "לחץ התחבר ל־ChatGPT"})
+
  @Slot(result=str)
  def chats(self):
   return self.encode({"items":[{"id":i,"title":t} for i,t in self.store.chats()],"active":self.chat_id})
