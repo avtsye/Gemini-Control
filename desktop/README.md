@@ -1,3 +1,12 @@
+## מצב אוטומטי ללא חלונית צפה
+
+גרסת האתר ב-EXE מציגה כעת את אתר Gemini על כל החלון. כאשר כותבים בקשה רגילה כמו **"פתח את צייר"**, **"פתח פנקס רשימות"**, **"צלם צילום מסך"** או **"צור קובץ מסמך"**, התוכנה מנסה לצרף הוראות כלים להודעה באופן אוטומטי. לחיצה ראשונה על Enter מכניסה את ההנחיות; יש לבדוק אותן וללחוץ Enter שוב לשליחה.
+
+כאשר Gemini משיב בפורמט פקודה תקין, היא נשלחת אוטומטית לאישור מקומי. פתיחת תוכנה ושינוי קובץ דורשים אישור. צילום מסך נשמר בתיקיית `Pictures/GeminiControl` המקומית, לאחר אישור, **ללא העלאה אוטומטית ל-Gemini**. תוצאת הפעולה מוכנסת לתיבת ההקלדה, אך אינה נשלחת אוטומטית.
+
+עדיין מדובר בשילוב מבוסס DOM באתר Gemini, לא גישה להנחיות המערכת הפנימיות של Google; הצלחת הבנייה אינה מוכיחה שהשליחה וזיהוי התשובות עובדים בכל גרסה של האתר.
+
+---
 # Gemini Control — Gemini website Desktop
 
 The default EXE now uses **the actual website** `https://gemini.google.com/app` inside a QtWebEngine window. **No Gemini API key** is required for this mode. The old API implementation remains in `desktop/app.py` as an optional source-only legacy prototype.
