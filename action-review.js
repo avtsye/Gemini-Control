@@ -17,6 +17,10 @@ chrome.storage.session.get('pendingWebsiteAction').then(({pendingWebsiteAction})
  action=pendingWebsiteAction;$('summary').textContent=action.description||'פעולת Gemini';
  if(action.type==='question'){$('summary').textContent=action.question;$('approve').hidden=true}
  if(action.type==='open_app'){$('summary').textContent='Gemini מבקש לפתוח את התוכנה: '+action.app+'\n'+(action.description||'')}
+ if(action.type==='draw_paint'){
+  $('summary').textContent='Gemini הכין ציור המורכב מ-'+action.shapes.length+' צורות. לאחר אישורך, הגשר ייצור תמונת PNG ויפתח אותה ב-Paint.';
+  $('approve').textContent='אשר ציור ופתח ב-Paint';
+ }
  if(action.type==='drawing_svg'){
   $('summary').textContent='Gemini הכין ציור לתצוגה בדפדפן. הוא לא ייפתח אוטומטית בתוכנת Windows.';
   const safe=sanitizeSVG(action.svg);
@@ -35,6 +39,11 @@ $('approve').onclick=async()=>{
    const r=await new Promise((resolve,reject)=>chrome.runtime.sendNativeMessage('org.gemini_control.bridge',{command:'open_app',app:action.app,id:String(Date.now())},x=>{
     const e=chrome.runtime.lastError;if(e)reject(Error(e.message));else if(!x?.ok)reject(Error(x?.error||'הפעולה נכשלה'));else resolve(x)}));
    done(r.message||'התוכנה נפתחה');
+  }else if(action.type==='draw_paint'){
+   if(!confirm('ליצור ציור חדש ולפתוח אותו ב-Paint?')){$('approve').disabled=false;return}
+   const r=await new Promise((resolve,reject)=>chrome.runtime.sendNativeMessage('org.gemini_control.bridge',{command:'draw_paint',shapes:action.shapes,id:String(Date.now())},x=>{
+    const e=chrome.runtime.lastError;if(e)reject(Error(e.message));else if(!x?.ok)reject(Error(x?.error||'הציור נכשל'));else resolve(x)}));
+   done('הציור נוצר ונפתח ב-Paint. מיקום הקובץ: '+r.file);
   }else if(action.type==='drawing_svg'){
    const safe=sanitizeSVG(action.svg),blob=new Blob([safe],{type:'image/svg+xml'});
    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='gemini-drawing.svg';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
