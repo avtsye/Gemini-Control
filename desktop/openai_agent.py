@@ -3,7 +3,7 @@ import json
 from agent_core import DesktopAgent
 from task_journal import TaskJournal
 
-TOOLS={"create_capability","move_workspace_file","sevenzip_status","list_available_tools","ocr_engines","ocr_image","speech_status","text_to_speech","transcribe_local","none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft","windows_snapshot","inspect_window","activate_control","observe_screen","workspace_files","inspect_workspace_file","open_workspace_file","installed_apps","system_status","set_control_text","propose_capability","create_pdf","compare_files","create_zip","extract_zip","create_spreadsheet","create_presentation","search_workspace","convert_data","image_info","convert_image","media_engines","probe_media","convert_media"}
+TOOLS={"create_capability","move_workspace_file","sevenzip_status","list_available_tools","ocr_engines","ocr_image","ocr_pdf","speech_status","text_to_speech","transcribe_local","none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft","windows_snapshot","inspect_window","activate_control","observe_screen","workspace_files","inspect_workspace_file","open_workspace_file","installed_apps","system_status","set_control_text","propose_capability","create_pdf","compare_files","create_zip","extract_zip","create_spreadsheet","create_presentation","search_workspace","convert_data","image_info","convert_image","media_engines","probe_media","convert_media"}
 INSTRUCTIONS="""You assist the user with bounded Windows computer actions.
 Always return ONE valid JSON object, without markdown:
 {"message":"Short Hebrew response","tool":"none|list_files|read_file|write_file|open_app|draw_paint|screenshot|click|type_text|hotkey|open_browser|create_word|project_file|email_draft|windows_snapshot|inspect_window|activate_control|observe_screen|workspace_files|inspect_workspace_file|open_workspace_file|installed_apps|system_status|set_control_text|propose_capability|create_pdf|compare_files|create_zip|extract_zip|create_spreadsheet|create_presentation|search_workspace|convert_data|image_info|convert_image|media_engines|probe_media|convert_media","arguments":{}}.
@@ -56,6 +56,7 @@ RTL layout after approval; direction may be "ltr" for English. Never claim
 the PDF was created unless the tool returned "created_pdf". To make a PDF,
 use create_pdf rather than proposing a missing native tool.
 Other approved tools:
+ocr_pdf args={"source":"scanned.pdf","target":"scanned.txt","language":"heb+eng","max_pages":12} performs OCR of scanned local PDF using installed Tesseract and PDFium.
 move_workspace_file args={"source":"folder/old.txt","destination":"folder/new.txt"} moves one file within the workspace without overwriting.
 sevenzip_status args={} reports whether a 7z engine is installed; do not claim 7z extraction is currently available through the agent.
 speech_status args={} detects optional offline speech engines.
