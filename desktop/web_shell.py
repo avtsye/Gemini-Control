@@ -397,10 +397,33 @@ class Bridge(QObject):
       "Clearly explain limits in description. User request: "+description)
     obj=json.loads(self.auth.response(prompt,model))
     identifier=self.workshop.draft(obj["name"],obj.get("description",""),obj["source"])
+    # Generated code stays disabled. Automated review may propose repairs,
+    # but every actual execution needs an explicit user approval.
+    findings=[]
+    test_result=None
+    for attempt in range(3):
+     info=self.workshop.inspect(identifier)
+     findings=info["findings"]
+     if findings:
+      issue="Sensitive imports detected: "+", ".join(findings)
+     else:
+      test_result=self.workshop.test_capability(identifier,{},self.approve,timeout=12)
+      if test_result.get("passed") or test_result.get("cancelled"):
+       break
+      issue=str(test_result.get("details","Test failed"))[-1200:]
+     if attempt==2:break
+     repair_prompt=("Repair this Python capability. Return ONLY a JSON object with key source. "
+       "Keep run(payload, output_dir). Use standard library; do not use network, shell, "
+       "credentials, or paths outside output_dir. Current source: "+
+       self.workshop.source(identifier)+"\\nFailure: "+issue)
+     repaired=json.loads(self.auth.response(repair_prompt,model))
+     self.workshop.revise(identifier,repaired["source"],approved=True)
     info=self.workshop.inspect(identifier)
     self.events.extension_draft.emit({"capability_id":identifier,"name":obj["name"],
       "description":obj.get("description",""),"source":info["source"],
-      "findings":info["findings"]})
+      "findings":info["findings"],"test_result":test_result,
+      "version":self.workshop._manifest(self.workshop._path(identifier)).get("version",1),
+      "requires_review":True})
    except Exception as e:
     self.events.extension_draft.emit({"error":"יצירת קוד הרחבה נכשלה: "+str(e)[:350]})
    finally:self.events.finished.emit()
