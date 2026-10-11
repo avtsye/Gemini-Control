@@ -293,6 +293,36 @@ class Bridge(QObject):
    return self.encode({"error":str(e)})
 
  @Slot(str,result=str)
+ def capability_versions(self,identifier):
+  try:return self.encode({"versions":self.workshop.versions(identifier)})
+  except (ValueError,OSError) as e:return self.encode({"error":str(e)})
+
+ @Slot(str,str,bool,result=str)
+ def revise_capability(self,identifier,source,approved):
+  try:return self.encode(self.workshop.revise(identifier,source,approved))
+  except (ValueError,OSError,PermissionError,SyntaxError) as e:return self.encode({"error":str(e)})
+
+ @Slot(str,int,bool,result=str)
+ def rollback_capability(self,identifier,version,approved):
+  try:return self.encode(self.workshop.rollback(identifier,version,approved))
+  except (ValueError,OSError,PermissionError,SyntaxError) as e:return self.encode({"error":str(e)})
+
+ @Slot(str,result=str)
+ def capability_dependency_status(self,identifier):
+  try:return self.encode(self.workshop.dependency_status(identifier))
+  except (ValueError,OSError) as e:return self.encode({"error":str(e)})
+
+ @Slot(str,str,bool,result=str)
+ def capability_set_dependencies(self,identifier,raw_packages,approved):
+  try:return self.encode(self.workshop.set_dependencies(identifier,json.loads(raw_packages),approved))
+  except (ValueError,OSError,PermissionError) as e:return self.encode({"error":str(e)})
+
+ @Slot(str,bool,result=str)
+ def capability_create_environment(self,identifier,approved):
+  try:return self.encode(self.workshop.create_environment(identifier,approved))
+  except (ValueError,OSError,PermissionError) as e:return self.encode({"error":str(e)})
+
+ @Slot(str,result=str)
  def disable_capability(self,identifier):
   try:self.workshop.disable(identifier);return self.encode({"ok":True})
   except (ValueError,OSError) as e:return self.encode({"error":str(e)})
