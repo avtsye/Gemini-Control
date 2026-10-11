@@ -16,8 +16,10 @@ class AgentToolCreationTests(unittest.TestCase):
    step=json.dumps({"message":"Creating tool","tool":"create_capability",
      "arguments":{"name":"Hello","description":"Echo","source":code}})
    done=json.dumps({"message":"Created","tool":"none","arguments":{}})
+   events=[]
    agent=OpenAIComputerAgent(Stub([step,done]),lambda _:True,
-          workshop=workshop,journal=TaskJournal(pathlib.Path(root)/"tasks"))
+          workshop=workshop,journal=TaskJournal(pathlib.Path(root)/"tasks"),
+          on_capability_draft=events.append)
    output=[]
    agent.run("Build a function","demo",output.append)
    created=workshop.list()
@@ -25,4 +27,5 @@ class AgentToolCreationTests(unittest.TestCase):
    self.assertEqual(created[0]["status"],"draft")
    self.assertTrue(created[0]["require_test"])
    self.assertTrue(any("created_draft" in msg for msg in output))
+   self.assertEqual(events[0]["capability_id"],created[0]["id"])
 if __name__=="__main__":unittest.main()
