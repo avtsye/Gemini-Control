@@ -133,6 +133,19 @@ class Bridge(QObject):
    return self.encode({"name":file.name,"characters":len(body),"pending":len(self.attachments)})
   except Exception as exc:return self.encode({"error":"לא ניתן לקרוא את הקובץ: "+str(exc)[:150]})
 
+ @Slot(str,str,result=str)
+ def attach_text(self,name,text):
+  if self.busy:return self.encode({"error":"המתן לסיום הבקשה"})
+  if not isinstance(name,str) or not name or len(name)>160:
+   return self.encode({"error":"שם קובץ לא תקין"})
+  if not isinstance(text,str) or len(text)>18000:
+   return self.encode({"error":"תוכן הקובץ ארוך מדי"})
+  if len(self.attachments)>=12:return self.encode({"error":"אפשר לצרף עד 12 קבצים"})
+  file=Path(name)
+  if file.name!=name or file.suffix.lower() not in {".txt",".md",".json",".csv",".py",".js",".html",".css"}:
+   return self.encode({"error":"פורמט לא נתמך לגרירה"})
+  self.attachments.append({"name":name,"text":text})
+  return self.encode({"name":name,"characters":len(text),"pending":len(self.attachments)})
  @Slot(result=str)
  def clear_attachments(self):
   self.attachments.clear()
