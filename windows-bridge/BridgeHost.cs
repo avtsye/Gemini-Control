@@ -14,6 +14,11 @@ class BridgeHost {
  static readonly Dictionary<string,string> Apps=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase){
   {"notepad","notepad.exe"},{"calculator","calc.exe"},{"explorer","explorer.exe"},{"paint","mspaint.exe"}
  };
+ static readonly string StateDir=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"GeminiControl");
+ static string FlagPath {get{return Path.Combine(StateDir,"enabled.flag");}}
+ static string LogPath {get{return Path.Combine(StateDir,"activity.log");}}
+ static bool Enabled(){Directory.CreateDirectory(StateDir);return !File.Exists(FlagPath)||File.ReadAllText(FlagPath).Trim()!="off";}
+ static void Audit(string action,string result){try{Directory.CreateDirectory(StateDir);File.AppendAllText(LogPath,DateTime.Now.ToString("s")+" "+action+" "+result+Environment.NewLine);}catch{}}
  static byte[] ReadExact(Stream s,int n){byte[] b=new byte[n];int p=0;while(p<n){int c=s.Read(b,p,n-p);if(c<=0)return null;p+=c;}return b;}
  static void Send(Stream s,object o){byte[] b=Encoding.UTF8.GetBytes(Json.Serialize(o));byte[] l=BitConverter.GetBytes(b.Length);s.Write(l,0,4);s.Write(b,0,b.Length);s.Flush();}
  static object Get(IDictionary<string,object> d,string key){object o;return d.TryGetValue(key,out o)?o:null;}
@@ -55,13 +60,16 @@ class BridgeHost {
  }
  static object Handle(Dictionary<string,object> data){
   object id=Get(data,"id");string command=Str(data,"command");
-  if(command=="ping")return new {id=id,ok=true,message="Gemini Control Bridge 0.2.0"};
+  if(command=="ping"||command=="status")return new {id=id,ok=true,enabled=Enabled(),message="Gemini Control Bridge 0.3.0"};
+  if(command=="set_enabled"){string value=Str(data,"enabled");if(value!="on"&&value!="off")return new{id=id,ok=false,error="Expected on/off"};Directory.CreateDirectory(StateDir);File.WriteAllText(FlagPath,value);Audit("set_enabled",value);return new{id=id,ok=true,enabled=Enabled()};}
+  if(command=="recent_log"){string[] lines=File.Exists(LogPath)?File.ReadAllLines(LogPath):new string[0];int start=Math.Max(0,lines.Length-30);var recent=new List<string>();for(int i=start;i<lines.Length;i++)recent.Add(lines[i]);return new{id=id,ok=true,lines=recent};}
+  if(!Enabled())return new{id=id,ok=false,error="Bridge is disabled. Enable it in the control panel."};
   if(command=="list_apps")return new {id=id,ok=true,apps=new string[]{"notepad","calculator","explorer","paint"}};
-  if(command=="draw_paint")return Draw(data,id);
+  if(command=="draw_paint"){Audit(command,"approved");return Draw(data,id);}
   if(command=="open_app"){
    string app=Str(data,"app"),exe;
    if(!Apps.TryGetValue(app,out exe))return new {id=id,ok=false,error="Application not allowlisted"};
-   Process.Start(new ProcessStartInfo(exe){UseShellExecute=false});
+   Audit("open_app",app);Process.Start(new ProcessStartInfo(exe){UseShellExecute=false});
    return new {id=id,ok=true,message="Launched "+app};
   }
   return new {id=id,ok=false,error="Unsupported command"};
