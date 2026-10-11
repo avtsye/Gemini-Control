@@ -27,6 +27,8 @@ class ConversationStore:
                     created TEXT NOT NULL);
                 CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages(conversation_id,id);
             """)
+            db.execute("""CREATE TABLE IF NOT EXISTS project_notes (
+                name TEXT PRIMARY KEY, notes TEXT NOT NULL DEFAULT '')""")
             db.execute("""CREATE TABLE IF NOT EXISTS conversation_flags (
                 conversation_id TEXT PRIMARY KEY, pinned INTEGER NOT NULL DEFAULT 0,
                 archived INTEGER NOT NULL DEFAULT 0, project TEXT NOT NULL DEFAULT '',
@@ -50,6 +52,24 @@ class ConversationStore:
     def chats(self):
         with self._db() as db:
             return db.execute("SELECT id,title FROM conversations ORDER BY updated DESC").fetchall()
+    def project_for_chat(self,chat_id):
+        with self._db() as db:
+            row=db.execute("SELECT project FROM conversation_flags WHERE conversation_id=?",(chat_id,)).fetchone()
+        return row[0] if row else ""
+    def project_memory(self,name):
+        if not isinstance(name,str) or not name or len(name)>80:
+            return ""
+        with self._db() as db:
+            row=db.execute("SELECT notes FROM project_notes WHERE name=?",(name,)).fetchone()
+        return row[0] if row else ""
+    def set_project_memory(self,name,notes):
+        if not isinstance(name,str) or not 1<=len(name)<=80:
+            raise ValueError("Invalid project name")
+        if not isinstance(notes,str) or len(notes)>12000:
+            raise ValueError("Project memory must be text below 12,000 characters")
+        with self._db() as db:
+            db.execute("INSERT INTO project_notes(name,notes) VALUES(?,?) ON CONFLICT(name) DO UPDATE SET notes=excluded.notes",(name,notes))
+        return {"saved":True,"project":name}
     def search(self,query,limit=100):
         if not isinstance(query,str) or not query.strip() or len(query)>200:
             return []
