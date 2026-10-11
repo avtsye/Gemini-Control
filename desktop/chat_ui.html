@@ -166,7 +166,7 @@ async function loadChats(){
   b.className='item'+(chat.id===data.active?' active':'');
   b.onclick=()=>call('select_chat',chat.id).then(showChat).catch(e=>status(e.message));
   const menu=element('button','⋯',row);menu.title='ניהול שיחה';menu.className='small-action';
-  menu.onclick=()=>chatActions(chat.id,chat.title,chat.pinned,chat.archived);
+  menu.onclick=()=>chatActions(chat.id,chat.title,chat.pinned,chat.archived,chat.project);
   box.append(row);
  }
  const archived=data.items.filter(x=>x.archived);
@@ -193,14 +193,28 @@ $('restoreChats').onclick=async()=>{
  try{const result=await call('restore_chats');if(!result.cancelled){notify('שוחזרו '+result.restored_chats+' שיחות','success');loadChats()}}catch(e){notify(e.message,'error')}
 };
 $('backupChats').onclick=()=>call('backup_chats').then(result=>{if(result.saved)notify('הגיבוי נשמר: '+result.saved,'success')}).catch(e=>notify(e.message,'error'));
-async function chatActions(id,title,pinned,archived){
+async function chatActions(id,title,pinned,archived,project){
  const body=modal('ניהול שיחה: '+title);
  for(const [field,value,label] of [['pinned',!pinned,pinned?'הסר נעיצה':'נעץ שיחה'],['archived',!archived,archived?'החזר מארכיון':'העבר לארכיון']]){
   const button=element('button',label,body);
   button.onclick=()=>call('set_chat_property',id,field,String(value)).then(()=>{loadChats();notify('עודכן','success')}).catch(e=>notify(e.message,'error'));
  }
- const tag=document.createElement('input');tag.placeholder='שם פרויקט או תיקייה';tag.maxLength=80;body.append(tag);
+ const tag=document.createElement('input');tag.placeholder='שם פרויקט או תיקייה';tag.maxLength=80;tag.value=project||'';body.append(tag);
  const save=element('button','שייך לפרויקט',body);save.onclick=()=>call('set_chat_property',id,'project',tag.value).then(loadChats).catch(e=>notify(e.message,'error'));
+ const memory=element('button','ערוך זיכרון הפרויקט',body);
+ memory.onclick=async()=>{
+  const name=tag.value.trim();
+  if(!name){notify('יש להזין שם פרויקט קודם','error');return}
+  try{
+   const existing=await call('get_project_memory',name);
+   const panel=modal('זיכרון פרויקט: '+name);
+   element('p','מידע זה נשמר במחשב ונשלח למודל כהקשר כאשר שולחים הודעה משיחה המשויכת לפרויקט.',panel);
+   const notes=document.createElement('textarea');notes.value=existing.notes||'';notes.maxLength=12000;
+   notes.style.minHeight='220px';notes.style.border='1px solid var(--border)';panel.append(notes);
+   const apply=element('button','שמור זיכרון',panel);
+   apply.onclick=()=>call('set_project_memory',name,notes.value).then(()=>notify('זיכרון הפרויקט נשמר','success')).catch(e=>notify(e.message,'error'));
+  }catch(e){notify(e.message,'error')}
+ };
 }
 function showChat(data){$('thread').replaceChildren();if(data.messages.length){for(const [i,m] of data.messages.entries())addMessage(m.role,m.content,i)}else{const h=document.createElement('div');h.className='welcome';h.textContent='איך אפשר לעזור היום?';$('thread').append(h)}loadChats()}
 function modal(title){$('modalTitle').textContent=title;$('modalBody').replaceChildren();if(!$('modal').open)$('modal').showModal();return $('modalBody')}
