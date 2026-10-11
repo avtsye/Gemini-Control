@@ -238,6 +238,31 @@ class Bridge(QObject):
   self.agent.enabled=not self.agent.enabled
   self.agent.local.enabled=self.agent.enabled
   return self.encode({"message":"הסוכן פעיל" if self.agent.enabled else "פעולות הסוכן מושבתות"})
+ @Slot(int,str,result=str)
+ def regenerate_answer(self,index,model):
+  if self.busy:return self.encode({"error":"משימה אחרת פעילה"})
+  if not self.auth.access_token:return self.encode({"error":"יש להתחבר תחילה"})
+  if model not in [slug for slug,_ in self.available_models]:
+   return self.encode({"error":"מודל לא זמין"})
+  messages=self.store.messages(self.chat_id)
+  if not isinstance(index,int) or index<0 or index>=len(messages) or messages[index][0]!="assistant":
+   return self.encode({"error":"יש לבחור תשובת סוכן קיימת"})
+  prior_user=next((text for role,text in reversed(messages[:index]) if role=="user"),None)
+  if not prior_user:return self.encode({"error":"לא נמצאה בקשה מקורית"})
+  chat_id=self.chat_id
+  self.active_task_chat=chat_id
+  self.busy=True
+  def worker():
+   try:
+    context="\\n".join(role+": "+content[:1500] for role,content in messages[:index][-8:])
+    prompt="Produce an alternative answer to the last user request, with relevant preceding context.\\n"+context+"\\nLatest user request: "+prior_user
+    response=self.auth.response(prompt,model)
+    self.events.message.emit("assistant","### גרסה נוספת — "+model+"\\n"+response)
+   except Exception as exc:
+    self.events.message.emit("system_note","יצירת גרסה נוספת נכשלה: "+str(exc)[:350])
+   finally:self.events.finished.emit()
+  threading.Thread(target=worker,daemon=True).start()
+  return self.encode({"started":True})
  @Slot(str,str,str,result=str)
  def compare_models(self,text,first,second):
   if self.busy:return self.encode({"error":"משימה אחרת פעילה"})
