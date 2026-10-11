@@ -29,6 +29,10 @@ class DesktopAgent:
                 return {"cancelled":True}
             from computer_inventory import installed_applications,system_status
             return installed_applications() if tool=="installed_apps" else system_status()
+        if tool=="create_pdf":
+            from pdf_tool import create_pdf
+            return create_pdf(args.get("name"),args.get("content"),self.workspace,
+                              self.approval,args.get("direction","rtl"))
         if tool=="windows_snapshot":
             if not self.approval("לאסוף כותרות חלונות פתוחים ולשלוח אותן למודל לצורך הבנת מצב המחשב?"):
                 return {"cancelled":True}
