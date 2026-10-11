@@ -79,6 +79,13 @@ class UIContract(unittest.TestCase):
   self.assertIn("def preview_attachment(self,index):",self.shell)
   self.assertIn("call('preview_attachment',index)",self.html)
   self.assertIn("content.kind==='image'",self.html)
+ def test_narrow_screen_actions_remain_reachable(self):
+  import re
+  self.assertRegex(self.html,r"\\.side-actions\\{[^}]*overflow-y:auto")
+  self.assertRegex(self.html,r"\\.toolbar\\{[^}]*flex-wrap:wrap")
+  self.assertRegex(self.html,r"#modalBody\\{[^}]*overflow-y:auto")
+  self.assertRegex(self.html,r"\\.compose-actions\\{[^}]*flex-wrap:wrap")
+  self.assertRegex(self.html,r"@media\\(max-width:720px\\)")
  def test_inline_javascript_syntax(self):
   executable=shutil.which("node")
   if not executable:self.skipTest("Node.js is not installed")
