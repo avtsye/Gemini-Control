@@ -23,7 +23,7 @@ dialog{border:1px solid var(--border);border-radius:17px;width:min(710px,92vw);m
 @media(max-width:780px){.side{width:180px;min-width:150px}.toolbar{padding:0 8px;flex-wrap:wrap;height:auto;min-height:65px}.toolbar .name{display:none}.messages{padding:12px}.composer-wrap{padding:10px}}
 .toast-area{position:fixed;top:18px;left:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;max-width:min(420px,90vw);pointer-events:none}.toast{pointer-events:auto;background:#202733;color:#fff;border-radius:14px;padding:14px 18px;box-shadow:0 12px 35px #0003;display:flex;align-items:center;gap:12px;line-height:1.6;border-right:4px solid #6fa1ff}.toast.error{border-right-color:#e76666}.toast.success{border-right-color:#51be87}.toast button{margin-right:auto;color:#fff;padding:3px 8px}.dialog-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px}.primary-action{background:#232323;color:#fff}.primary-action:hover{background:#454545}
 </style></head><body><div class="shell">
-<aside class="side"><div class="brand">AI Control</div><button class="item" id="new">＋ שיחה חדשה</button><div class="section">השיחות שלך</div><div id="chats"></div><div class="side-actions"><button class="item" id="extensions">◈ הרחבות</button><button class="item" id="proposals">◇ הצעות לשיפור</button><button class="item" id="delete">⌫ מחק שיחה</button></div></aside>
+<aside class="side"><div class="brand">AI Control</div><button class="item" id="new">＋ שיחה חדשה</button><div class="section">השיחות שלך</div><div id="chats"></div><div class="side-actions"><button class="item" id="capabilities">✦ סדנת יכולות חדשות</button><button class="item" id="extensions">◈ הרחבות</button><button class="item" id="proposals">◇ הצעות לשיפור</button><button class="item" id="delete">⌫ מחק שיחה</button></div></aside>
 <main class="main"><div class="toolbar"><span class="name">AI Control Desktop</span><button class="pill" id="login">התחבר ל־ChatGPT</button><select id="models" aria-label="מודל"></select><button class="pill" id="stop">עצור סוכן</button><span id="state">לא מחובר</span></div>
 <div class="messages" id="scroll"><div class="thread" id="thread"><div class="welcome">איך אפשר לעזור היום?</div></div></div>
 <div class="composer-wrap"><div class="composer"><textarea id="prompt" placeholder="שלח הודעה או בקש לבצע פעולה במחשב…" aria-label="הודעה"></textarea><div class="compose-actions"><label class="toggle"><input type="checkbox" id="agent" checked> מצב סוכן מחשב</label><button class="send" id="send" aria-label="שלח">↑</button></div></div></div></main></div>
@@ -54,12 +54,49 @@ async function loadChats(){const data=await call('chats');const box=$('chats');b
 function showChat(data){$('thread').replaceChildren();if(data.messages.length){for(const m of data.messages)addMessage(m.role,m.content)}else{const h=document.createElement('div');h.className='welcome';h.textContent='איך אפשר לעזור היום?';$('thread').append(h)}loadChats()}
 function modal(title){$('modalTitle').textContent=title;$('modalBody').replaceChildren();if(!$('modal').open)$('modal').showModal();return $('modalBody')}
 function element(tag,text,parent){const e=document.createElement(tag);e.textContent=text;parent.append(e);return e}
+async function capabilityWorkshop(){
+ const body=modal('סדנת פיתוח יכולות');
+ element('p','בנה יכולת חדשה בקוד Python, כולל יצירת שמע וקובצי מדיה. קוד חדש נשמר כטיוטה ולא מופעל אוטומטית.',body);
+ const description=document.createElement('textarea');description.placeholder='למשל: צור קובץ WAV של מנגינה לפי תווים ותדרים';description.style.border='1px solid #bbb';body.append(description);
+ const create=element('button','צור קוד הרחבה לבדיקה',body);
+ create.onclick=()=>call('generate_capability',description.value,$('models').value).then(()=>notify('יוצר טיוטת יכולת…')).catch(e=>notify(e.message,'error'));
+ const data=await call('capabilities');
+ for(const item of data.items){
+   element('h3',item.name+' ('+item.status+')',body);
+   element('p',item.description||'',body);
+   const inspect=element('button','בדוק את קוד ההרחבה',body);
+   inspect.onclick=()=>inspectCapability(item.id);
+   if(item.status==='enabled'){
+     const run=element('button','הרץ עם אישור',body);
+     run.onclick=async()=>{const payload=promptPayload();if(payload!==null)try{await call('run_capability',item.id,payload);notify('הרחבה התחילה לרוץ','success')}catch(e){notify(e.message,'error')}};
+     const disable=element('button','השבת',body);
+     disable.onclick=()=>call('disable_capability',item.id).then(capabilityWorkshop).catch(e=>notify(e.message,'error'));
+   }
+ }
+}
+function promptPayload(){
+ const raw=$('capabilityPayload').value.trim();try{JSON.parse(raw);return raw}catch(e){notify('קלט JSON אינו תקין','error');return null}
+}
+async function inspectCapability(id){
+ const info=await call('inspect_capability',id);
+ const body=modal('בדיקת קוד הרחבה');
+ element('p','זהו קוד Python אמיתי, לא סביבת Sandbox אבטחתית. יש לקרוא את הקוד לפני הפעלה.',body);
+ for(const warning of info.findings)element('p',warning,body);
+ element('pre',info.source,body);
+ if(info.status!=='enabled'){
+   const enable=element('button','אני מאשר את הקוד ומפעיל יכולת זו',body);
+   enable.onclick=async()=>{if(await askConfirm('קוד Python זה ירוץ בהרשאות המשתמש שלך ואינו מבודד אבטחתית. להפעיל רק לאחר בדיקה?'))try{await call('enable_capability',id,true);notify('היכולת הופעלה','success');capabilityWorkshop()}catch(e){notify(e.message,'error')}};
+ }
+ const label=element('label','קלט JSON להרצה',body);
+ const input=document.createElement('textarea');input.id='capabilityPayload';input.value='{}';input.style.border='1px solid #aaa';body.append(input);
+}
 async function proposals(){const data=await call('proposals');const body=modal('הצעות לשיפור הסוכן');if(!data.items.length)element('p','אין כרגע הצעות.',body);for(const p of data.items){element('h3',p.description+' ('+p.status+')',body);element('pre',p.steps,body);if(p.status==='pending'){for(const [s,title] of [['approved','סמן כנבדק'],['rejected','דחה']]){const b=element('button',title,body);b.onclick=()=>call('review_proposal',p.id,s).then(proposals)}}if(p.status==='approved'){const b=element('button','בנה הרחבה מההצעה',body);b.onclick=()=>call('build_extension',p.id,$('models').value).then(()=>notify('מכין הרחבה לבדיקה…')).catch(e=>notify(e.message,'error'))}}}
 async function extensions(){const data=await call('extensions');const body=modal('מערכת הרחבות');element('p','הרחבות הן רצפים מוגבלים של כלים קיימים. הן אינן מריצות קוד חיצוני.',body);for(const x of data.items){const p=element('div',x.name+' — '+x.status+' · '+x.steps.length+' צעדים',body);p.style.padding='8px';const enable=element('button',x.status==='enabled'?'השבת':'הפעל',body);enable.onclick=()=>call('toggle_extension',x.id,x.status!=='enabled').then(extensions);if(x.status==='enabled'){const run=element('button','הרץ באישור',body);run.onclick=()=>call('run_extension',x.id).then(v=>notify(v.message,'success')).catch(e=>notify(e.message,'error'))}}element('h3','הוסף הרחבה (JSON מאומת)',body);const input=document.createElement('textarea');input.style.border='1px solid #ccc';input.style.height='130px';input.placeholder='{"name":"בדיקת חלונות","steps":[{"tool":"windows_snapshot","arguments":{}}]}';body.append(input);const install=element('button','בדוק והוסף מושבתת',body);install.onclick=()=>call('install_extension',input.value).then(extensions).catch(e=>notify(e.message,'error'))}
 $('close').onclick=()=>$('modal').close();
 $('new').onclick=()=>call('new_chat').then(showChat).catch(e=>status(e.message));
 $('delete').onclick=async()=>{if(await askConfirm('למחוק את השיחה המקומית ואת כל ההודעות שבה?'))call('delete_chat').then(showChat).catch(e=>notify(e.message,'error'))};
 $('extensions').onclick=()=>extensions().catch(e=>notify(e.message,'error'));
+$('capabilities').onclick=()=>capabilityWorkshop().catch(e=>notify(e.message,'error'));
 $('proposals').onclick=()=>proposals().catch(e=>notify(e.message,'error'));
 $('login').onclick=()=>call('login').catch(e=>status(e.message));
 $('stop').onclick=()=>call('toggle_agent').then(x=>status(x.message));
@@ -82,6 +119,7 @@ try{
 }}
 function updateModels(models){const select=$('models');select.replaceChildren();for(const m of models){const o=document.createElement('option');o.value=m[0];o.textContent=m[1];select.append(o)}}
 if(!window.qt||!qt.webChannelTransport){status('גשר Windows אינו זמין. בדוק את התקנת Qt WebEngine.')}else new QWebChannel(qt.webChannelTransport,channel=>{bridge=channel.objects.api;bridge.event.connect(raw=>{const msg=JSON.parse(raw);if(msg.type==='extension_draft'){
+ if(msg.capability_id){notify('טיוטת קוד חדשה נוצרה: '+msg.name,'success');inspectCapability(msg.capability_id).catch(e=>notify(e.message,'error'))}
  if(msg.error){notify(msg.error,'error');}
  else if(msg.manifest){
   const preview=JSON.stringify(msg.manifest,null,2);
