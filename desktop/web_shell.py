@@ -322,6 +322,22 @@ class Bridge(QObject):
   try:return self.encode(self.workshop.create_environment(identifier,approved))
   except (ValueError,OSError,PermissionError) as e:return self.encode({"error":str(e)})
 
+ @Slot(str,bool,result=str)
+ def capability_install_dependencies(self,identifier,approved):
+  if self.busy:return self.encode({"error":"משימה אחרת פעילה"})
+  if not approved:return self.encode({"cancelled":True})
+  # Explicit user consent is checked again by workshop.install_dependencies.
+  self.busy=True
+  self.active_task_chat=self.chat_id
+  def worker():
+   try:
+    result=self.workshop.install_dependencies(identifier,self.approve)
+    self.events.message.emit("assistant","התקנת תלויות: "+json.dumps(result,ensure_ascii=False)[:2000])
+   except Exception as exc:self.events.message.emit("system_note","התקנת תלויות נכשלה: "+str(exc)[:300])
+   finally:self.events.finished.emit()
+  threading.Thread(target=worker,daemon=True).start()
+  return self.encode({"started":True})
+
  @Slot(str,result=str)
  def disable_capability(self,identifier):
   try:self.workshop.disable(identifier);return self.encode({"ok":True})
