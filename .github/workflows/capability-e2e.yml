@@ -1,0 +1,30 @@
+name: Capability End To End
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'desktop/capability_workshop.py'
+      - 'desktop/openai_agent.py'
+      - 'desktop/web_shell.py'
+      - 'desktop/tests/test_capability_end_to_end.py'
+      - '.github/workflows/capability-e2e.yml'
+permissions:
+  contents: read
+jobs:
+  integration:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile source
+        run: python -m compileall -q desktop
+      - name: Create and use real plugin
+        run: python desktop/tests/test_capability_end_to_end.py -v
+      - name: Capability regression
+        run: python desktop/tests/test_capability_workshop.py -v
