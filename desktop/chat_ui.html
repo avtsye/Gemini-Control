@@ -125,6 +125,14 @@ function addMessage(role,text,index=null){
  const item=document.createElement('div');item.className='msg '+role;
  const label=document.createElement('div');label.className='label';label.textContent=role==='user'?'אתה':role==='assistant'?'ChatGPT':'מערכת';
  const content=document.createElement('div');renderMarkdown(content,text);item.append(label,content);
+ if(role==='assistant'&&Number.isInteger(index)){
+  const another=element('button','↻ גרסה נוספת',item);another.className='small-action';
+  another.onclick=async()=>{
+   if(!$('models').value){notify('יש לבחור מודל קודם','error');return}
+   try{await call('regenerate_answer',index,$('models').value);activity('יוצר גרסה נוספת…',true)}
+   catch(e){notify(e.message,'error')}
+  };
+ }
  if(role==='user'&&Number.isInteger(index)){
   const edit=element('button','✎ ערוך הודעה',item);edit.className='small-action';
   edit.onclick=async()=>{
