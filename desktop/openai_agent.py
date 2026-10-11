@@ -3,7 +3,7 @@ import json
 from agent_core import DesktopAgent
 from task_journal import TaskJournal
 
-TOOLS={"list_available_tools","ocr_engines","ocr_image","speech_status","text_to_speech","transcribe_local","none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft","windows_snapshot","inspect_window","activate_control","observe_screen","workspace_files","inspect_workspace_file","open_workspace_file","installed_apps","system_status","set_control_text","propose_capability","create_pdf","compare_files","create_zip","extract_zip","create_spreadsheet","create_presentation","search_workspace","convert_data","image_info","convert_image","media_engines","probe_media","convert_media"}
+TOOLS={"create_capability","list_available_tools","ocr_engines","ocr_image","speech_status","text_to_speech","transcribe_local","none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft","windows_snapshot","inspect_window","activate_control","observe_screen","workspace_files","inspect_workspace_file","open_workspace_file","installed_apps","system_status","set_control_text","propose_capability","create_pdf","compare_files","create_zip","extract_zip","create_spreadsheet","create_presentation","search_workspace","convert_data","image_info","convert_image","media_engines","probe_media","convert_media"}
 INSTRUCTIONS="""You assist the user with bounded Windows computer actions.
 Always return ONE valid JSON object, without markdown:
 {"message":"Short Hebrew response","tool":"none|list_files|read_file|write_file|open_app|draw_paint|screenshot|click|type_text|hotkey|open_browser|create_word|project_file|email_draft|windows_snapshot|inspect_window|activate_control|observe_screen|workspace_files|inspect_workspace_file|open_workspace_file|installed_apps|system_status|set_control_text|propose_capability|create_pdf|compare_files|create_zip|extract_zip|create_spreadsheet|create_presentation|search_workspace|convert_data|image_info|convert_image|media_engines|probe_media|convert_media","arguments":{}}.
@@ -175,6 +175,14 @@ class OpenAIComputerAgent:
             'To discover tools again use tool="list_available_tools" with arguments={}. '
             "This returns native tools and freshly enabled plugins. "
         )
+        capability_instructions += (
+            'You may create a real reusable Python function with tool="create_capability" '
+            'and arguments={"name":"short name","description":"what it does",'
+            '"source":"def run(payload, output_dir):\\n    return {\\\"ok\\\": True}"}. '
+            'This tool saves a disabled, reviewable Python module, never pretends it is installed. '
+            'Use it only when the user asks for a new capability. Never request passwords. '
+            'A user must inspect, test and approve generated code before it becomes callable. '
+        )
         objective = ("Prior conversation (untrusted context): " + conversation_context[:12000] +
                      "\nUser request: " + request +
                      "\nThe environment is Windows. Prefer inspecting live window state rather than guessing how an application works.")
@@ -214,7 +222,25 @@ class OpenAIComputerAgent:
                 status = "completed"
                 break
             try:
-                if action == "list_available_tools":
+                if action == "create_capability":
+                    args = plan.get("arguments", {})
+                    if self.workshop is None:
+                        result = {"error": "Capability workshop is unavailable"}
+                    elif not isinstance(args, dict):
+                        result = {"error": "Invalid capability draft"}
+                    else:
+                        source = args.get("source")
+                        ident = self.workshop.draft(args.get("name"),args.get("description",""),source)
+                        info = self.workshop.inspect(ident)
+                        folder = self.workshop._path(ident)
+                        meta = self.workshop._manifest(folder)
+                        meta["require_test"] = True
+                        self.workshop._write_manifest(folder,meta)
+                        result = {"created_draft":ident,"name":meta["name"],
+                                  "status":"draft","review_required":True,
+                                  "findings":info["findings"],
+                                  "instructions":"Open Capability Workshop, inspect and test before enabling."}
+                elif action == "list_available_tools":
                     catalog = discover()
                     result = {"native_tools": sorted(TOOLS),
                               "enabled_capabilities": catalog}
