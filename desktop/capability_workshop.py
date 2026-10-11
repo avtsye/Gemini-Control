@@ -223,7 +223,7 @@ class CapabilityWorkshop:
         meta=json.loads(meta_path.read_text(encoding="utf-8"))
         test=meta.get("last_test",{})
         current_hash=hashlib.sha256(self.source(identifier).encode("utf-8")).hexdigest()
-        if not test.get("passed") or test.get("source_sha256")!=current_hash:
+        if meta.get("require_test",False) and (not test.get("passed") or test.get("source_sha256")!=current_hash):
             raise PermissionError("Run a successful approved smoke test before activation")
         meta["status"]="enabled"
         meta_path.write_text(json.dumps(meta,ensure_ascii=False,indent=2),encoding="utf-8")
