@@ -6,6 +6,8 @@ on:
       - 'desktop/workspace_archives.py'
       - 'desktop/agent_core.py'
       - 'desktop/openai_agent.py'
+      - 'desktop/task_journal.py'
+      - 'desktop/tests/test_task_journal.py'
       - 'desktop/tests/test_workspace_archives.py'
       - '.github/workflows/workspace-tools-qa.yml'
   workflow_dispatch:
@@ -27,3 +29,5 @@ jobs:
         run: python -m compileall -q desktop
       - name: Test workspace ZIP and compare functions
         run: python desktop/tests/test_workspace_archives.py -v
+      - name: Test multi-step task journal
+        run: python desktop/tests/test_task_journal.py -v
