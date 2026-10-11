@@ -16,6 +16,7 @@ class Events(QObject):
  models=Signal(object)
  finished=Signal()
  approval=Signal(str)
+ extension_draft=Signal(object)
  
 class Bridge(QObject):
  event=Signal(str)
@@ -31,6 +32,7 @@ class Bridge(QObject):
   self.events.models.connect(self.on_models)
   self.events.finished.connect(self.done)
   self.events.approval.connect(self.ask_permission)
+  self.events.extension_draft.connect(lambda info:self.emit("extension_draft",**info))
   self._wait=threading.Event()
   self._allowed=False
   self.busy=False
@@ -148,6 +150,41 @@ class Bridge(QObject):
  def review_proposal(self,identifier,status):
   try:self.store.review(identifier,status);return self.encode({"ok":True})
   except Exception as e:return self.encode({"error":str(e)})
+ @Slot(str,str,result=str)
+ def build_extension(self,identifier,model):
+  proposal=next((row for row in self.store.proposals() if row[0]==identifier),None)
+  if not proposal:return self.encode({"error":"הצעה לא נמצאה"})
+  if proposal[3]!="approved":return self.encode({"error":"תחילה יש לאשר את ההצעה"})
+  if not self.auth.access_token:return self.encode({"error":"יש להתחבר לחשבון ChatGPT"})
+  if model not in [slug for slug,_ in self.available_models]:return self.encode({"error":"יש לבחור מודל זמין"})
+  if self.busy:return self.encode({"error":"משימה אחרת פעילה"})
+  self.busy=True
+  def worker():
+   try:
+    from extensions import ALLOWED,ARGUMENTS,REQUIRED
+    tools="; ".join(t+": fields "+",".join(sorted(ARGUMENTS[t]))+" required "+",".join(sorted(REQUIRED.get(t,set()))) for t in sorted(ALLOWED))
+    prompt=("Create a useful declarative Windows extension manifest from this user-approved proposal. "
+      "Only compose already-available tools. Do not invent functionality. Return JSON ONLY: "
+      '{"name":"...","description":"...","steps":[{"tool":"...","arguments":{}}]}. '
+      "At most 6 steps. No shell/code execution, placeholders, credential requests, secrets, or URLs to unknown sites. "
+      "If this cannot be implemented with the allowed tools return JSON "
+      '{"unavailable":"Clear Hebrew explanation of what native capability must be developed first"}. '
+      "Allowed tools and argument keys: "+tools+"\nProposal: "+proposal[1]+"\nSuggested plan: "+proposal[2][:6000])
+    raw=self.auth.response(prompt,model).strip()
+    if raw.startswith("```"):
+     raw=raw.split("\n",1)[-1].rsplit("```",1)[0].strip()
+    obj=json.loads(raw)
+    if "unavailable" in obj:
+     self.events.extension_draft.emit({"error":str(obj["unavailable"])[:700]})
+    else:
+     validated=self.extension_manager.validate(obj)
+     self.events.extension_draft.emit({"manifest":validated,"proposal":identifier})
+   except Exception as e:
+    self.events.extension_draft.emit({"error":"לא ניתן ליצור הרחבה תקינה: "+str(e)[:300]})
+   finally:self.events.finished.emit()
+  threading.Thread(target=worker,daemon=True).start()
+  return self.encode({"started":True})
+
  @Slot(str,result=str)
  def install_proposal(self,identifier):
   proposal=next((row for row in self.store.proposals() if row[0]==identifier),None)
