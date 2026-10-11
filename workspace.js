@@ -86,3 +86,41 @@ chrome.storage.session.get('geminiPendingRequest').then(async ({geminiPendingReq
     finally{button.disabled=false}
   });
 })();
+
+/* Windows Bridge: commands are restricted by the native host, never generated raw shell. */
+(() => {
+ const panel=document.createElement('section');panel.className='panel';
+ const heading=document.createElement('strong');heading.textContent='6. גשר Windows (ניסיוני)';
+ const explanation=document.createElement('p');explanation.className='muted';
+ explanation.textContent='כדי לפתוח תוכנות נדרש להתקין את גשר Windows הקטן. הבדיקות והפתיחה מתבצעות רק בלחיצה ובאישור שלך. לא ניתן להריץ פקודות חופשיות.';
+ const status=document.createElement('div');status.className='muted';
+ const ping=document.createElement('button');ping.textContent='בדוק חיבור לגשר';
+ const pick=document.createElement('select');
+ [['notepad','פנקס רשימות'],['calculator','מחשבון'],['explorer','סייר הקבצים']].forEach(([id,name])=>{const o=document.createElement('option');o.value=id;o.textContent=name;pick.append(o)});
+ const launch=document.createElement('button');launch.textContent='פתח תוכנה מאושרת';
+ panel.append(heading,explanation,ping,pick,launch,status);
+ document.querySelector('main').append(panel);
+ async function talk(command,app) {
+   return new Promise((resolve,reject)=>{
+     chrome.runtime.sendNativeMessage('org.gemini_control.bridge',{command,app,id:String(Date.now())},reply=>{
+       const error=chrome.runtime.lastError;
+       if(error)return reject(Error(error.message));
+       if(!reply||!reply.ok)return reject(Error(reply?.error||'No reply from bridge'));
+       resolve(reply);
+     });
+   });
+ }
+ ping.addEventListener('click',async()=>{
+   ping.disabled=true;try{const r=await talk('ping');status.textContent='מחובר: '+r.message}
+   catch(e){status.textContent='הגשר אינו זמין: '+e.message+' — בדוק שהתקנת את הגשר עם מזהה התוסף הנכון.'}
+   finally{ping.disabled=false}
+ });
+ launch.addEventListener('click',async()=>{
+   const name=pick.options[pick.selectedIndex]?.textContent||pick.value;
+   if(!confirm('האם לפתוח במחשב את '+name+'?'))return;
+   launch.disabled=true;
+   try{const r=await talk('open_app',pick.value);status.textContent=r.message||'התוכנה נפתחה'}
+   catch(e){status.textContent='שגיאה: '+e.message}
+   finally{launch.disabled=false}
+ });
+})();
