@@ -46,7 +46,8 @@ chrome.runtime.onMessage.addListener((message,sender,sendResponse)=>{
     const instruction=String(message.instruction||'').trim().slice(0,4000);
     if(!instruction || !/(?:השתמש|באמצעות|extension)/i.test(instruction))throw Error('הוראה מפורשת חסרה');
     await chrome.storage.session.set({geminiPendingRequest:instruction});
-    await chrome.tabs.create({url:chrome.runtime.getURL('workspace.html')});
+    const isDesktop=/(?:פתח|הפעל|מחשבון|פנקס|סייר|תוכנ|windows|desktop|launch|open app)/i.test(instruction);
+    await chrome.tabs.create({url:chrome.runtime.getURL(isDesktop?'agent.html':'workspace.html')});
     return {ok:true};
   })().then(sendResponse).catch(e=>sendResponse({error:e.message||String(e)}));
   return true;
