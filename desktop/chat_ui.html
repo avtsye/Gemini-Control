@@ -33,7 +33,8 @@ dialog{border:1px solid var(--border);border-radius:17px;width:min(710px,92vw);m
 <div id="toastArea" class="toast-area" role="status" aria-live="polite"></div><dialog id="confirmDialog" aria-labelledby="confirmTitle"><h2 id="confirmTitle">אישור פעולה</h2><p id="confirmText"></p><div class="dialog-actions"><button id="confirmCancel">ביטול</button><button class="primary-action" id="confirmAccept">אישור</button></div></dialog><dialog id="modal"><h2 id="modalTitle"></h2><div id="modalBody"></div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:15px"><button id="close">סגור</button></div></dialog>
 <script src="qrc:///qtwebchannel/qwebchannel.js"></script><script>
 let bridge=null;let working=false;
-const $=id=>document.getElementById(id);\n$('closeArtifact').onclick=()=>$('artifactPanel').hidden=true;
+const $=id=>document.getElementById(id);
+$('closeArtifact').onclick=()=>$('artifactPanel').hidden=true;
 function notify(message,kind='info'){
  const item=document.createElement('div');item.className='toast '+kind;
  const label=document.createElement('span');label.textContent=String(message);item.append(label);
