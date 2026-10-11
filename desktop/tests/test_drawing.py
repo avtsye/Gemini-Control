@@ -30,7 +30,7 @@ class DrawingTests(unittest.TestCase):
             with patch("drawing_tool.subprocess.Popen") as launch:
                 result=draw_in_paint(EXAMPLE,folder,lambda _:True)
                 path=pathlib.Path(result["created_png"])
-                self.assertEqual(path.read_bytes()[:8],b"\\x89PNG\\r\\n\\x1a\\n")
+                self.assertEqual(path.read_bytes()[:8],bytes([137,80,78,71,13,10,26,10]))
                 self.assertEqual(result["opened_in"],"paint")
                 launch.assert_called_once()
                 self.assertEqual(launch.call_args.args[0][0],"mspaint.exe")
