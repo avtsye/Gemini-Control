@@ -22,6 +22,7 @@ class VoiceRecorder(QObject):
         self.timer=QTimer(self)
         self.timer.timeout.connect(self._read)
         self.recording=False
+        self.finished_result=None
     def start(self):
         if self.recording:return {"error":"Recording is already active"}
         microphone=QMediaDevices.defaultAudioInput()
@@ -38,6 +39,7 @@ class VoiceRecorder(QObject):
             self.audio=None
             return {"error":"Cannot start microphone capture"}
         self.parts=[]
+        self.finished_result=None
         self.recording=True
         self.timer.start(100)
         return {"recording":True,"sample_rate":16000,"format":"pcm16_mono"}
@@ -46,13 +48,20 @@ class VoiceRecorder(QObject):
         data=bytes(self.device.readAll())
         if data:self.parts.append(data)
         if sum(map(len,self.parts))>=self.MAX_BYTES:
-            self.stop()
+            self.finished_result=self.stop()
     def stop(self):
-        if not self.recording:return {"error":"No recording in progress"}
-        self._read()
+        if not self.recording:
+            if self.finished_result is not None:
+                result=self.finished_result
+                self.finished_result=None
+                return result
+            return {"error":"No recording in progress"}
         self.timer.stop()
-        self.audio.stop()
+        if self.device is not None:
+            final=bytes(self.device.readAll())
+            if final:self.parts.append(final)
         self.recording=False
+        self.audio.stop()
         data=b"".join(self.parts)[:self.MAX_BYTES]
         self.parts=[]
         self.device=None
