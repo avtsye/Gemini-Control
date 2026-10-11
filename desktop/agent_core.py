@@ -29,6 +29,13 @@ class DesktopAgent:
                 return {"cancelled":True}
             from computer_inventory import installed_applications,system_status
             return installed_applications() if tool=="installed_apps" else system_status()
+        if tool in {"compare_files","create_zip","extract_zip"}:
+            from workspace_archives import compare_files, create_zip, extract_zip
+            if tool == "compare_files":
+                return compare_files(self.workspace,args.get("left"),args.get("right"),self.approval)
+            if tool == "create_zip":
+                return create_zip(self.workspace,args.get("sources"),args.get("target"),self.approval)
+            return extract_zip(self.workspace,args.get("archive"),args.get("destination"),self.approval)
         if tool=="create_pdf":
             from pdf_tool import create_pdf
             return create_pdf(args.get("name"),args.get("content"),self.workspace,
