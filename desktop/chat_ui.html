@@ -30,7 +30,7 @@ body.theme-dark{color-scheme:dark;--bg:#171b22;--sidebar:#1f2630;--text:#e6eaf0;
 .activity-entry{padding:8px;border-bottom:1px solid var(--border);line-height:1.6}
 .builtin-card{padding:12px;margin:8px 0;border:1px solid var(--border);border-radius:12px}.builtin-card p{margin:5px 0;color:var(--muted)}.builtin-card button{border:1px solid var(--border)}
 </style></head><body><div class="shell">
-<aside class="side"><div class="brand">AI Control</div><button class="item" id="new">＋ שיחה חדשה</button><div class="section">השיחות שלך</div><input id="chatSearch" placeholder="חיפוש בכל השיחות..." aria-label="חיפוש בשיחות"><button class="item" id="backupChats">↓ גיבוי שיחות ל־JSON</button><button class="item" id="restoreChats">↑ שחזור שיחות מגיבוי</button><div id="chats"></div><div class="side-actions"><button class="item" id="toolsCatalog">☷ כלים זמינים לסוכן</button><button class="item" id="toolSecurity">♧ הרשאות כלים</button><button class="item" id="reminders">◷ תזכורות מתוזמנות</button><button class="item" id="capabilities">✦ סדנת יכולות חדשות</button><button class="item" id="extensions">◈ הרחבות</button><button class="item" id="proposals">◇ הצעות לשיפור</button><button class="item" id="delete">⌫ מחק שיחה</button></div></aside>
+<aside class="side"><div class="brand">AI Control</div><button class="item" id="new">＋ שיחה חדשה</button><div class="section">השיחות שלך</div><input id="chatSearch" placeholder="חיפוש בכל השיחות..." aria-label="חיפוש בשיחות"><button class="item" id="backupChats">↓ גיבוי שיחות ל־JSON</button><button class="item" id="restoreChats">↑ שחזור שיחות מגיבוי</button><div id="chats"></div><div class="side-actions"><button class="item" id="toolsCatalog">☷ כלים זמינים לסוכן</button><button class="item" id="toolSecurity">♧ הרשאות כלים</button><button class="item" id="health">♡ אבחון מערכת</button><button class="item" id="reminders">◷ תזכורות מתוזמנות</button><button class="item" id="capabilities">✦ סדנת יכולות חדשות</button><button class="item" id="extensions">◈ הרחבות</button><button class="item" id="proposals">◇ הצעות לשיפור</button><button class="item" id="delete">⌫ מחק שיחה</button></div></aside>
 <main class="main"><div class="toolbar"><span class="name">AI Control Desktop</span><button class="pill" id="uiPrefs">⚙ מראה</button><button class="pill" id="account">החשבון שלי</button><button class="pill" id="login">התחבר ל־ChatGPT</button><select id="models" aria-label="מודל"></select><button class="pill" id="compareModels">⇄ השווה מודלים</button><button class="pill" id="agentActivity">☷ פעילות הסוכן</button><button class="pill" id="stop">עצור סוכן</button><span id="state">לא מחובר</span></div>
 <div class="messages" id="scroll"><div class="thread" id="thread"><div class="welcome">איך אפשר לעזור היום?</div></div></div>
 <div class="composer-wrap"><div id="activity" class="activity"><span class="activity-dot"></span><span id="activityText">מוכן לשיחה</span></div><div class="composer"><div id="fileChips" class="file-chips"></div><textarea id="prompt" placeholder="שלח הודעה או בקש לבצע פעולה במחשב…" aria-label="הודעה"></textarea><div class="compose-actions"><button class="small-action" id="attach" title="צרף מסמך" aria-label="צרף מסמך">📎 צרף קובץ</button><label class="toggle"><input type="checkbox" id="agent" checked> מצב סוכן מחשב</label><button class="send" id="send" aria-label="שלח">↑</button></div></div></div></main><aside id="artifactPanel" class="artifact-panel" hidden><div class="artifact-heading"><strong id="artifactTitle">תצוגת תוצר</strong><button id="closeArtifact" aria-label="סגור תצוגה">×</button></div><div id="artifactContent"></div></aside></div>
@@ -275,6 +275,28 @@ $('close').onclick=()=>$('modal').close();
 $('new').onclick=()=>call('new_chat').then(showChat).catch(e=>status(e.message));
 $('delete').onclick=async()=>{if(await askConfirm('למחוק את השיחה המקומית ואת כל ההודעות שבה?'))call('delete_chat').then(showChat).catch(e=>notify(e.message,'error'))};
 $('extensions').onclick=()=>extensions().catch(e=>notify(e.message,'error'));
+$('health').onclick=async()=>{
+ try{
+  const report=await call('diagnose_system');
+  const body=modal('אבחון התקנת Gemini-Control');
+  element('p','מערכת הפעלה: '+report.os+' · Python '+report.python,body);
+  element('p','מצב מסד השיחות: '+report.conversation_database,body);
+  element('h3','ספריות Python',body);
+  for(const [name,installed] of Object.entries(report.modules)){
+   element('p',(installed?'✓ ':'○ ')+name+(installed?' — מותקן':' — חסר'),body);
+  }
+  element('h3','תוכנות חיצוניות',body);
+  for(const [name,installed] of Object.entries(report.executables)){
+   element('p',(installed?'✓ ':'○ ')+name+(installed?' — זמין':' — לא מותקן'),body);
+  }
+  element('h3','מצב התוספים',body);
+  element('p',JSON.stringify(report.extensions),body);
+  for(const warning of report.warnings)element('p','⚠ '+warning,body);
+  const copy=element('button','העתק דוח טכני',body);
+  copy.onclick=()=>navigator.clipboard.writeText(JSON.stringify(report,null,2))
+    .then(()=>notify('הדוח הועתק','success')).catch(()=>notify('ההעתקה נכשלה','error'));
+ }catch(e){notify(e.message,'error')}
+};
 $('toolSecurity').onclick=async()=>{
  try{
   const info=await call('tools_catalog');
