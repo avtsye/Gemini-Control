@@ -2,10 +2,10 @@
 import json
 from agent_core import DesktopAgent
 
-TOOLS={"none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","email_draft"}
+TOOLS={"none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft"}
 INSTRUCTIONS="""You assist the user with bounded Windows computer actions.
 Always return ONE valid JSON object, without markdown:
-{"message":"Short Hebrew response","tool":"none|list_files|read_file|write_file|open_app|draw_paint|screenshot|click|type_text|hotkey|open_browser|create_word|email_draft","arguments":{}}.
+{"message":"Short Hebrew response","tool":"none|list_files|read_file|write_file|open_app|draw_paint|screenshot|click|type_text|hotkey|open_browser|create_word|project_file|email_draft","arguments":{}}.
 For open_app, arguments={"app":"notepad|paint|explorer|calculator"}.
 For requests to DRAW something in Microsoft Paint, always use tool="draw_paint"
 directly with arguments={"svg":"<svg xmlns=... viewBox=...>...</svg>"}.
@@ -27,6 +27,7 @@ type_text args={"text":"..."} pastes text into the active window (user approval)
 hotkey args={"keys":["ctrl","s"]} limited approved shortcut list.
 open_browser args={"url":"https://..."} opens an HTTPS page in user's browser.
 create_word args={"name":"document.docx","content":"..."} creates a Word document.
+project_file args={"project":"MyApp","path":"src/main.py","content":"..."} creates or updates code files inside Documents/GeminiControl-Workspace/Projects/MyApp. This is NOT arbitrary computer file access. User approval required.
 email_draft args={"to":"email@example.com","subject":"...","body":"..."}
 opens an email draft only; attachments are NOT automatically added, and mail
 is NEVER sent. Explicitly explain any unfinished steps to the user.
