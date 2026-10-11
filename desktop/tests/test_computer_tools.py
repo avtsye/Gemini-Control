@@ -23,7 +23,7 @@ class ToolsTests(unittest.TestCase):
    result=self.action("email_draft",{"to":"avtsye@gmail.com","subject":"בדיקה","body":"שלום"},True)
    self.assertEqual(result["sent"],False)
    self.assertEqual(result["attachment_added"],False)
-   self.assertTrue(open_browser.call_args.args[0].startswith("mailto:avtsye@gmail.com"))
+   self.assertTrue(open_browser.call_args.args[0].startswith("https://mail.google.com/mail/?view=cm&fs=1&to=avtsye%40gmail.com"))
  def test_email_denial(self):
   with patch("computer_tools.webbrowser.open") as open_browser:
    self.assertEqual(self.action("email_draft",{"to":"avtsye@gmail.com"}),{"cancelled":True})
