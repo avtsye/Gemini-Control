@@ -458,6 +458,28 @@ $('localAI').onclick=async()=>{
     element('p','אפשר להתקין את הספריות האופציונליות באמצעות desktop/requirements-media.txt; מודלים יש להוסיף בנפרד.',results);
    }catch(error){notify(error.message,'error')}
   };
+  element('h3','התקנת מנועים אופציונליים',body);
+  element('p','ההתקנה דורשת Python במחשב, עשויה להוריד קבצים גדולים ולהריץ קוד של חבילות חיצוניות. נדרש אישור נפרד. מודלים אינם יורדים אוטומטית.',body);
+  const features=[
+   ['speech','תמלול וקול מקומי'],
+   ['embedding','חיפוש סמנטי עם Embeddings'],
+   ['image','יצירת תמונות (התקנה כבדה)']
+  ];
+  const checks=[];
+  for(const [name,label] of features){
+   const row=element('label','',body);row.style.display='block';row.style.margin='8px 0';
+   const check=document.createElement('input');check.type='checkbox';check.value=name;
+   row.append(check,document.createTextNode(' '+label));checks.push(check);
+  }
+  const install=element('button','התקן מנועים שנבחרו',body);install.className='small-action';
+  install.onclick=async()=>{
+   const chosen=checks.filter(item=>item.checked).map(item=>item.value);
+   if(!chosen.length){notify('יש לבחור לפחות מנוע אחד','error');return}
+   try{
+    await call('setup_local_ai',JSON.stringify(chosen));
+    notify('התקנת המנועים התחילה; יידרש אישור מפורש','success');
+   }catch(error){notify(error.message,'error')}
+  };
   verify.click();
  }catch(error){notify(error.message,'error')}
 };
