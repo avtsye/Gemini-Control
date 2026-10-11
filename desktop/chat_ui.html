@@ -134,6 +134,7 @@ function showArtifact(title,content,type='text'){
 }
 function addMessage(role,text,index=null){
  const thread=$('thread');thread.querySelector('.welcome')?.remove();
+ if(index===null)index=thread.querySelectorAll('.msg').length;
  const item=document.createElement('div');item.className='msg '+role;
  const label=document.createElement('div');label.className='label';label.textContent=role==='user'?'אתה':role==='assistant'?'ChatGPT':'מערכת';
  const content=document.createElement('div');renderMarkdown(content,text);item.append(label,content);
@@ -146,12 +147,12 @@ function addMessage(role,text,index=null){
   };
  }
  if(role==='user'&&Number.isInteger(index)){
-  const edit=element('button','✎ ערוך הודעה',item);edit.className='small-action';
+  const edit=element('button','✎ ערוך ושלח מחדש',item);edit.className='small-action';
   edit.onclick=async()=>{
    const newText=window.prompt('ערוך הודעה (התשובות שאחריה יוסרו מהשיחה):',text);
    if(newText===null||!newText.trim())return;
    if(!await askConfirm('עריכת ההודעה תסיר את התשובות וההודעות המאוחרות יותר. להמשיך?'))return;
-   try{await call('edit_message',index,newText);await call('select_chat',(await call('chats')).active).then(showChat);$('prompt').value=newText;notify('ההודעה נערכה. אפשר לשלוח מחדש.','success')}catch(e){notify(e.message,'error')}
+   try{await call('edit_message',index,newText);await call('select_chat',(await call('chats')).active).then(showChat);if(!$('models').value){$('prompt').value=newText;notify('ההודעה נערכה. בחר מודל כדי לשלוח מחדש.','success');return}await call('resend_edited_message',$('models').value,$('agent').checked);activity('מייצר תשובה להודעה הערוכה…',true)}catch(e){notify(e.message,'error')}
   };
  }
  thread.append(item);$('scroll').scrollTop=$('scroll').scrollHeight
