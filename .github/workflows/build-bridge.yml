@@ -16,7 +16,7 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          Add-Type -Path "windows-bridge/BridgeHost.cs" -OutputAssembly "windows-bridge/GeminiControlBridge.exe" -OutputType ConsoleApplication -ReferencedAssemblies "System.Web.Extensions.dll"
+          Add-Type -Path "windows-bridge/BridgeHost.cs" -OutputAssembly "windows-bridge/GeminiControlBridge.exe" -OutputType ConsoleApplication -ReferencedAssemblies @("System.Web.Extensions.dll","System.Drawing.dll")
           if (!(Test-Path "windows-bridge/GeminiControlBridge.exe")) { throw "Build output missing" }
       - uses: actions/upload-artifact@v4
         with:
