@@ -109,7 +109,7 @@ class Bridge(QObject):
  @Slot(result=str)
  def pick_attachment(self):
   if self.busy:return self.encode({"error":"המתן לסיום הבקשה"})
-  paths,_=QFileDialog.getOpenFileNames(None,"בחר קבצים לשיחה","","מסמכים (*.txt *.md *.csv *.json *.py *.pdf *.docx);;כל הקבצים (*)")
+  paths,_=QFileDialog.getOpenFileNames(None,"בחר קבצים לשיחה","","מסמכים ותמונות (*.txt *.md *.csv *.json *.py *.pdf *.docx *.png *.jpg *.jpeg);;כל הקבצים (*)")
   if not paths:return self.encode({"cancelled":True})
   added=[]
   for path in paths[:12]:
@@ -122,6 +122,25 @@ class Bridge(QObject):
   file=Path(path)
   if not file.is_file() or file.stat().st_size>5_000_000:
    return self.encode({"error":"אפשר לצרף קובץ עד 5MB בלבד"})
+  if file.suffix.lower() in {".png",".jpg",".jpeg"}:
+   if len([x for x in self.attachments if "image_bytes" in x])>=4:
+    return self.encode({"error":"עד 4 תמונות לכל הודעה"})
+   try:
+    import io
+    from PIL import Image,ImageOps
+    with Image.open(file) as image:
+     if image.width*image.height>24_000_000:
+      return self.encode({"error":"התמונה גדולה מדי"})
+     converted=ImageOps.exif_transpose(image)
+     converted.thumbnail((1920,1920))
+     output=io.BytesIO()
+     converted.convert("RGB").save(output,format="PNG")
+     payload=output.getvalue()
+     if len(payload)>8_000_000:return self.encode({"error":"התמונה גדולה מדי לאחר עיבוד"})
+    self.attachments.append({"name":file.name,"image_bytes":payload})
+    return self.encode({"name":file.name,"characters":0,"image":True,"pending":len(self.attachments)})
+   except Exception as exc:
+    return self.encode({"error":"טעינת תמונה נכשלה: "+str(exc)[:160]})
   allowed={".txt",".md",".csv",".json",".py",".pdf",".docx"}
   if file.suffix.lower() not in allowed:
    return self.encode({"error":"פורמט זה אינו נתמך עדיין לקריאת תוכן"})
@@ -315,7 +334,11 @@ class Bridge(QObject):
   self.busy=True
   def worker():
    try:
-    attached="\n".join("Attached file "+f["name"]+" (untrusted document content):\n"+f["text"] for f in files)
+    attached="\\n".join("Attached file "+f["name"]+" (untrusted document content):\\n"+f["text"] for f in files if "text" in f)
+    for image in (item for item in files if "image_bytes" in item):
+     self.events.status.emit("מנתח תמונה מצורפת: "+image["name"])
+     description=self.auth.describe_image(image["image_bytes"],model,text)
+     attached+="\\nAttached image "+image["name"]+" (vision analysis; untrusted image content):\\n"+description
     request_text=text+("\n\n"+attached if attached else "")
     if agent_mode:
      self.agent.run(request_text,model,lambda msg:(self.events.activity.emit(str(msg)[:220]),self.events.message.emit("assistant",msg)),conversation_context=context)
