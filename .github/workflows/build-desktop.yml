@@ -45,7 +45,7 @@ jobs:
       - name: Package Windows EXE
         shell: pwsh
         run: |
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --name AIControlDesktop --paths desktop --add-data "desktop/chat_ui.html;." --add-data "desktop/examples;examples" --add-data "desktop/capability_runner.py;." --collect-submodules PySide6.QtWebEngineCore --collect-submodules PySide6.QtMultimedia --hidden-import voice_recorder --hidden-import scheduled_agent_store --hidden-import subagent_orchestrator desktop/app_openai.py
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name AIControlDesktop --paths desktop --add-data "desktop/chat_ui.html;." --add-data "desktop/examples;examples" --add-data "desktop/capability_runner.py;." --add-data "desktop/model_worker.py;." --collect-submodules PySide6.QtWebEngineCore --collect-submodules PySide6.QtMultimedia --hidden-import voice_recorder --hidden-import scheduled_agent_store --hidden-import subagent_orchestrator --hidden-import model_runtime --hidden-import model_worker desktop/app_openai.py
           if (!(Test-Path dist/AIControlDesktop.exe)) { throw "EXE missing" }
       - uses: actions/upload-artifact@v4
         with:
