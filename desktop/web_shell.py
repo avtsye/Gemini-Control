@@ -50,6 +50,7 @@ class Bridge(QObject):
   self.available_models=[]
   self.logins_in_progress=False
   self.attachments=[]
+  self.voice_recorder=None
   self.agent=OpenAIComputerAgent(self.auth,self.approve,self.propose,workshop=self.workshop,
     on_capability_draft=lambda info:self.events.extension_draft.emit(info))
   # Background token refresh: do not block the main HTML window.
@@ -89,6 +90,23 @@ class Bridge(QObject):
   return self.encode({"ok":True})
  def propose(self,description,steps):
   return self.store.propose(self.chat_id,description,steps)
+ @Slot(result=str)
+ def start_voice_recording(self):
+  if self.busy:return self.encode({"error":"משימה אחרת פעילה"})
+  try:
+   from voice_recorder import VoiceRecorder
+   if self.voice_recorder is None:
+    self.voice_recorder=VoiceRecorder(self.agent.local.workspace,self)
+   return self.encode(self.voice_recorder.start())
+  except (OSError,RuntimeError,ImportError) as exc:
+   return self.encode({"error":"מיקרופון לא זמין: "+str(exc)[:240]})
+ @Slot(result=str)
+ def stop_voice_recording(self):
+  if self.voice_recorder is None:return self.encode({"error":"אין הקלטה פעילה"})
+  try:return self.encode(self.voice_recorder.stop())
+  except (OSError,RuntimeError) as exc:
+   return self.encode({"error":"שמירת ההקלטה נכשלה: "+str(exc)[:240]})
+
  @Slot(result=str)
  def session(self):
   return self.encode({"models":self.available_models,
