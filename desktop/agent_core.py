@@ -36,6 +36,11 @@ class DesktopAgent:
             if tool == "create_zip":
                 return create_zip(self.workspace,args.get("sources"),args.get("target"),self.approval)
             return extract_zip(self.workspace,args.get("archive"),args.get("destination"),self.approval)
+        if tool in {"ocr_engines","ocr_image"}:
+            from ocr_tools import ocr_engines,ocr_image
+            if tool=="ocr_engines":return ocr_engines()
+            return ocr_image(self.workspace,args.get("source"),args.get("target"),
+                             self.approval,args.get("language","heb+eng"))
         if tool in {"media_engines","probe_media","convert_media"}:
             from media_tools import engines,probe_media,convert_media
             if tool=="media_engines":return engines()
