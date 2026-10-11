@@ -274,6 +274,32 @@ class Bridge(QObject):
   self.agent.enabled=not self.agent.enabled
   self.agent.local.enabled=self.agent.enabled
   return self.encode({"message":"הסוכן פעיל" if self.agent.enabled else "פעולות הסוכן מושבתות"})
+ @Slot(str,bool,result=str)
+ def resend_edited_message(self,model,agent_mode):
+  if self.busy:return self.encode({"error":"משימה אחרת פעילה"})
+  if not self.auth.access_token:return self.encode({"error":"יש להתחבר תחילה"})
+  if model not in [slug for slug,_ in self.available_models]:
+   return self.encode({"error":"מודל לא זמין"})
+  chat_id=self.chat_id
+  messages=self.store.messages(chat_id)
+  if not messages or messages[-1][0]!="user":
+   return self.encode({"error":"יש לערוך תחילה הודעת משתמש"})
+  prompt=messages[-1][1]
+  context="\\n".join(role+": "+text[:900] for role,text in messages[-9:-1])
+  self.active_task_chat=chat_id
+  self.busy=True
+  def worker():
+   try:
+    if agent_mode:
+     self.agent.run(prompt,model,
+       lambda msg:(self.events.activity.emit(str(msg)[:220]),self.events.message.emit("assistant",msg)),
+       conversation_context=context)
+    else:
+     self.events.message.emit("assistant",self.auth.response(context+"\\nUser: "+prompt,model))
+   except Exception as exc:self.events.message.emit("system_note","שליחה חוזרת נכשלה: "+str(exc)[:350])
+   finally:self.events.finished.emit()
+  threading.Thread(target=worker,daemon=True).start()
+  return self.encode({"started":True})
  @Slot(int,str,result=str)
  def regenerate_answer(self,index,model):
   if self.busy:return self.encode({"error":"משימה אחרת פעילה"})
