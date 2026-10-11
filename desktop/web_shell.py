@@ -106,6 +106,19 @@ class Bridge(QObject):
    "history_path":self.store.path,
    "capability_count":len(self.workshop.list())})
 
+ @Slot(int,result=str)
+ def preview_attachment(self,index):
+  if not isinstance(index,int) or index<0 or index>=len(self.attachments):
+   return self.encode({"error":"הקובץ אינו מצורף עוד"})
+  item=self.attachments[index]
+  if "image_bytes" in item:
+   import base64
+   return self.encode({"name":item["name"],"kind":"image",
+     "data_url":"data:image/"+("png" if item["name"].lower().endswith(".png") else "jpeg")
+     +";base64,"+base64.b64encode(item["image_bytes"]).decode("ascii")})
+  return self.encode({"name":item["name"],"kind":"text",
+                       "text":str(item.get("text",""))[:8000]})
+
  @Slot(result=str)
  def pick_attachment(self):
   if self.busy:return self.encode({"error":"המתן לסיום הבקשה"})
