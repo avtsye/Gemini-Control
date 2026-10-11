@@ -1,0 +1,18 @@
+'use strict';
+const $=id=>document.getElementById(id);
+function send(command,extras={}){
+ return new Promise((resolve,reject)=>chrome.runtime.sendNativeMessage('org.gemini_control.bridge',{command,...extras,id:String(Date.now())},reply=>{
+  const error=chrome.runtime.lastError;if(error)return reject(Error(error.message));
+  if(!reply?.ok)return reject(Error(reply?.error||'לא התקבלה תשובה'));
+  resolve(reply);
+ }));
+}
+async function check(){
+ try{const x=await send('status');$('status').textContent=x.enabled?'● הגשר מחובר ופעיל':'● הגשר מחובר אך חסום לפעולות';$('status').style.color=x.enabled?'#12704b':'#b25314'}
+ catch(e){$('status').textContent='הגשר אינו מחובר: '+e.message;$('status').style.color='#b32525'}
+}
+$('refresh').onclick=check;
+$('enable').onclick=async()=>{if(!confirm('להפעיל מחדש אפשרות לבצע פעולות במחשב?'))return;try{await send('set_enabled',{enabled:'on'});await check()}catch(e){alert(e.message)}};
+$('disable').onclick=async()=>{try{await send('set_enabled',{enabled:'off'});await check()}catch(e){alert(e.message)}};
+$('load').onclick=async()=>{try{const r=await send('recent_log');$('log').textContent=(r.lines||[]).join('\n')||'אין פעולות מתועדות'}catch(e){$('log').textContent='שגיאה: '+e.message}};
+check();
