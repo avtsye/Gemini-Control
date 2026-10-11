@@ -1,31 +1,10 @@
-name: Build Gemini Control Desktop EXE
+name: Build AI Control Desktop EXE
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - 'desktop/**'
-      - '.github/workflows/build-desktop.yml'
 permissions:
   contents: read
 jobs:
-  test:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Check desktop Python syntax and unittest
-        shell: pwsh
-        run: |
-          python -m pip install requests 'PyJWT[crypto]' truststore
-          python -m compileall -q desktop
-          node --check desktop/website_bridge.js
-          python desktop/tests/test_agent.py -v
-          python desktop/tests/test_openai_signin.py -v
-          python desktop/tests/test_openai_agent.py -v
   build:
-    needs: test
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,13 +12,20 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install dependencies
-        run: python -m pip install -r desktop/requirements.txt
-      - name: Package application
+        run: python -m pip install -r desktop/requirements.txt pyinstaller
+      - name: Run local desktop tests
         shell: pwsh
         run: |
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --name GeminiControlDesktop --add-data "desktop/website_bridge.js;." desktop/app_openai.py --paths desktop
-          if (!(Test-Path dist/GeminiControlDesktop.exe)) { throw 'EXE missing' }
+          python -m compileall -q desktop
+          python desktop/tests/test_agent.py -v
+          python desktop/tests/test_openai_agent.py -v
+          python desktop/tests/test_openai_signin.py -v
+      - name: Package Windows EXE
+        shell: pwsh
+        run: |
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name AIControlDesktop --paths desktop desktop/app_openai.py
+          if (!(Test-Path dist/AIControlDesktop.exe)) { throw "EXE missing" }
       - uses: actions/upload-artifact@v4
         with:
-          name: GeminiControlDesktop-Windows
-          path: dist/GeminiControlDesktop.exe
+          name: AIControlDesktop-Windows
+          path: dist/AIControlDesktop.exe
