@@ -24,6 +24,10 @@ class DesktopAgent:
         if not self.enabled:
             raise PermissionError("Agent is paused")
         args = arguments if isinstance(arguments, dict) else {}
+        if tool=="discover_research_sources":
+            from research_discovery import discover_research_sources
+            return discover_research_sources(args.get("query"),self.approval,
+                                             args.get("language","he"),args.get("limit",6))
         if tool in {"image_model_status","generate_local_image"}:
             from local_image_generation import image_model_status,generate_local_image
             if tool=="image_model_status":
