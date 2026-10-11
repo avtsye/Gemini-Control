@@ -270,6 +270,14 @@ class Bridge(QObject):
   except (OSError,ValueError) as e:return self.encode({"error":str(e)})
 
  @Slot(result=str)
+ def tools_catalog(self):
+  from openai_agent import TOOLS
+  return self.encode({"native_tools":sorted(TOOLS),
+    "capabilities":[{"id":item.get("id"),"name":item.get("name"),
+                     "status":item.get("status"),"description":item.get("description","")}
+                     for item in self.workshop.list()]})
+
+ @Slot(result=str)
  def capabilities(self):
   return self.encode({"items":self.workshop.list()})
 
