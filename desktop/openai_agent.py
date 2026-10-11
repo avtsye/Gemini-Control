@@ -113,13 +113,14 @@ When the goal is fulfilled, tool MUST be "none". Ask for clarification in messag
 and use tool="none" when unsure. Do not request shell commands or hidden actions."""
 
 class OpenAIComputerAgent:
-    def __init__(self, signin, approval, propose=None, journal=None, workshop=None):
+    def __init__(self, signin, approval, propose=None, journal=None, workshop=None, on_capability_draft=None):
         self.signin=signin
         self.local=DesktopAgent("",approval=approval)
         self.enabled=True
         self.propose=propose
         self.journal=journal
         self.workshop=workshop
+        self.on_capability_draft=on_capability_draft
 
     def run(self, request, model, report, max_steps=8, conversation_context=""):
         # Journal failures must never prevent the agent from operating.
@@ -243,6 +244,11 @@ class OpenAIComputerAgent:
                         meta = self.workshop._manifest(folder)
                         meta["require_test"] = True
                         self.workshop._write_manifest(folder,meta)
+                        if self.on_capability_draft:
+                            self.on_capability_draft({"capability_id":ident,
+                                "name":meta["name"],"description":meta.get("description",""),
+                                "source":info["source"],"findings":info["findings"],
+                                "requires_review":True})
                         result = {"created_draft":ident,"name":meta["name"],
                                   "status":"draft","review_required":True,
                                   "findings":info["findings"],
