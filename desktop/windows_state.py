@@ -56,3 +56,30 @@ def activate_control(handle,automation_id,expected_name,approve):
         return {"cancelled":True}
     control.invoke()
     return {"invoked":automation_id,"window":handle}
+
+def set_control_text(handle,automation_id,expected_name,value,approve):
+    """Edit an accessible non-password Windows text field after explicit approval."""
+    from pywinauto import Desktop
+    handle=_handle(handle)
+    if not isinstance(automation_id,str) or not 1<=len(automation_id)<=100:
+        raise ValueError("Automation ID required")
+    if not isinstance(expected_name,str) or len(expected_name)>180:
+        raise ValueError("Expected name invalid")
+    if not isinstance(value,str) or len(value)>3000:
+        raise ValueError("Text too long")
+    window=Desktop(backend="uia").window(handle=handle)
+    if not window.exists(timeout=1):raise ValueError("Window no longer exists")
+    matches=[]
+    for control in window.descendants()[:500]:
+        try:
+            if control.element_info.automation_id==automation_id and control.window_text()==expected_name and control.is_enabled() and control.element_info.control_type=="Edit":
+                matches.append(control)
+        except Exception:continue
+    if len(matches)!=1:raise ValueError("Edit field has changed; inspect again")
+    control=matches[0]
+    if bool(getattr(control.element_info,"is_password",False)):
+        raise ValueError("Password fields are not supported")
+    if not approve("לשנות שדה טקסט ב-"+window.window_text()[:100]+"?\n"+value[:250]):
+        return {"cancelled":True}
+    control.set_edit_text(value)
+    return {"edited_field":automation_id,"characters":len(value)}
