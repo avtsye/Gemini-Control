@@ -2,6 +2,7 @@
 import json
 from agent_core import DesktopAgent
 from task_journal import TaskJournal
+from tool_policy import ToolPolicy
 
 TOOLS={"index_workspace","search_knowledge","create_capability","download_file","inspect_python_project","run_python_tests","fetch_page","move_workspace_file","sevenzip_status","list_available_tools","ocr_engines","ocr_image","ocr_pdf","speech_status","text_to_speech","transcribe_local","none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft","windows_snapshot","inspect_window","activate_control","observe_screen","workspace_files","inspect_workspace_file","open_workspace_file","installed_apps","system_status","set_control_text","propose_capability","create_pdf","compare_files","create_zip","extract_zip","create_spreadsheet","create_presentation","search_workspace","convert_data","image_info","convert_image","media_engines","probe_media","convert_media"}
 INSTRUCTIONS="""You assist the user with bounded Windows computer actions.
@@ -128,6 +129,7 @@ class OpenAIComputerAgent:
         self.journal=journal
         self.workshop=workshop
         self.on_capability_draft=on_capability_draft
+        self.policy=ToolPolicy()
 
     def run(self, request, model, report, max_steps=8, conversation_context=""):
         # Journal failures must never prevent the agent from operating.
@@ -177,7 +179,7 @@ class OpenAIComputerAgent:
         catalog = discover()
         capability_instructions = (
             "\nAVAILABLE INSTALLED TOOLS (use these exactly, not just suggest them): "
-            + ", ".join(sorted(TOOLS)) +
+            + ", ".join(sorted(x for x in TOOLS if self.policy.allowed(x))) +
             "\nThe exact JSON field tool accepts any name in this list. "
             + "If an enabled plugin in the following catalog fits the user request, "
             + 'select tool="run_capability" with arguments={"id":"EXACT_UUID","payload":{}}. '
@@ -237,7 +239,9 @@ class OpenAIComputerAgent:
                 status = "completed"
                 break
             try:
-                if action == "create_capability":
+                if not self.policy.allowed(action):
+                    result = {"error":"Tool is disabled by local permission settings"}
+                elif action == "create_capability":
                     args = plan.get("arguments", {})
                     if self.workshop is None:
                         result = {"error": "Capability workshop is unavailable"}
@@ -262,7 +266,7 @@ class OpenAIComputerAgent:
                                   "instructions":"Open Capability Workshop, inspect and test before enabling."}
                 elif action == "list_available_tools":
                     catalog = discover()
-                    result = {"native_tools": sorted(TOOLS),
+                    result = {"native_tools": sorted(x for x in TOOLS if self.policy.allowed(x)),
                               "enabled_capabilities": catalog}
                 elif action == "run_capability":
                     args = plan.get("arguments", {})
