@@ -3,10 +3,10 @@ No Gemini API calls. Google login may restrict embedded browsers.
 """
 import json
 import sys
+from datetime import datetime
 from pathlib import Path
 from PySide6.QtCore import QObject, Slot, Signal, QUrl, Qt
-from PySide6.QtWidgets import (QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,
- QPushButton,QLabel,QMessageBox,QInputDialog,QTextEdit)
+from PySide6.QtWidgets import (QApplication,QMainWindow,QWidget,QVBoxLayout,QMessageBox)
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebEngineCore import QWebEngineScript, QWebEngineProfile
 from PySide6.QtWebChannel import QWebChannel
@@ -29,12 +29,24 @@ class Operations(QObject):
             if not isinstance(obj,dict) or obj.get("version")!=1:
                 raise ValueError("פורמט לא תקין")
             operation=obj.get("type")
-            if operation not in {"open_app","write_file","question"}:
+            if operation not in {"open_app","write_file","question","screenshot"}:
                 raise ValueError("פעולה אינה נתמכת בגרסת האתר")
             if not self.enabled:
                 raise PermissionError("הגשר כבוי")
             if operation=="question":
                 result={"question":str(obj.get("question",""))[:500]}
+            elif operation=="screenshot":
+                if not self.confirm("לצלם מסך ולשמור צילום מקומי? הצילום לא יישלח ל-Gemini."):
+                    result={"cancelled":True}
+                else:
+                    screen=QApplication.primaryScreen()
+                    if screen is None: raise RuntimeError("לא נמצא מסך לצילום")
+                    folder=Path.home()/"Pictures"/"GeminiControl"
+                    folder.mkdir(parents=True,exist_ok=True)
+                    destination=folder/("Screenshot-"+datetime.now().strftime("%Y%m%d-%H%M%S-%f")+".png")
+                    if not screen.grabWindow(0).save(str(destination),"PNG"):
+                        raise RuntimeError("שמירת צילום המסך נכשלה")
+                    result={"saved_screenshot":str(destination),"uploaded":False}
             elif operation=="open_app":
                 result=self.agent.execute("open_app",{"app":obj.get("app")})
             else:
@@ -50,15 +62,8 @@ class Window(QMainWindow):
         self.resize(1200,800)
         root=QWidget(); self.setCentralWidget(root)
         layout=QVBoxLayout(root)
-        row=QHBoxLayout()
-        self.status=QLabel("השיחה נטענת מאתר Google · הפעולות מחייבות אישור")
-        row.addWidget(self.status)
-        self.toggle=QPushButton("השבת פעולות")
-        self.toggle.clicked.connect(self.toggle_agent);row.addWidget(self.toggle)
-        self.home=QPushButton("חזור ל-Gemini")
-        self.home.clicked.connect(lambda:self.web.setUrl(QUrl("https://gemini.google.com/app")))
-        row.addWidget(self.home)
-        layout.addLayout(row)
+        layout.setContentsMargins(0,0,0,0)
+        self.statusBar().showMessage("Gemini Control פעיל · אישור נדרש לפעולות מחשב")
         self.web=QWebEngineView()
         # Use a persistent profile for website sign-in and local cookies.
         profile=QWebEngineProfile("GeminiControl",self)
@@ -80,13 +85,14 @@ class Window(QMainWindow):
         self.web.setUrl(QUrl("https://gemini.google.com/app"))
         self.web.loadFinished.connect(self.loaded)
         root.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        menu=self.menuBar().addMenu("גשר מקומי")
+        menu.addAction("השבת / הפעל פעולות").triggered.connect(self.toggle_agent)
     def toggle_agent(self):
         self.operations.enabled=not self.operations.enabled
         self.operations.agent.enabled=self.operations.enabled
-        self.toggle.setText("השבת פעולות" if self.operations.enabled else "אפשר פעולות")
-        self.status.setText("הגשר פעיל" if self.operations.enabled else "הגשר מושבת")
+        self.statusBar().showMessage("הגשר פעיל" if self.operations.enabled else "הגשר מושבת")
     def loaded(self,ok):
-        if not ok:self.status.setText("האתר לא נטען. בדוק רשת, תעודות או חסימה של דפדפן מוטמע.")
+        if not ok:self.statusBar().showMessage("האתר לא נטען. בדוק רשת, תעודות או חסימה של דפדפן מוטמע.")
 
 def main():
     app=QApplication(sys.argv)
