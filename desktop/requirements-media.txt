@@ -1,0 +1,7 @@
+# Optional local capabilities. Install only the engines you need.
+# Python 3.12/3.13 wheel availability varies with platform.
+pyttsx3>=2.90,<3
+pypdfium2>=4.30,<6
+faster-whisper>=1.1,<2
+# Tesseract executable + Hebrew traineddata and FFmpeg must be installed separately.
+# Whisper models must already exist locally; Gemini-Control never downloads one automatically.
