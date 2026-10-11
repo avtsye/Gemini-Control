@@ -21,7 +21,7 @@ class Events(QObject):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("AI Control Desktop — ChatGPT")
+        self.setWindowTitle("AI Control Desktop — סוכן Windows")
         self.resize(960,720)
         self.auth=ChatGPTSignIn()
         self._approval_event=threading.Event()
@@ -57,10 +57,14 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.state)
         self.chat=QTextEdit()
         self.chat.setReadOnly(True)
+        self.chat.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        self.chat.setAlignment(Qt.AlignmentFlag.AlignRight)
         layout.addWidget(self.chat)
         self.input=QTextEdit()
         self.input.setPlaceholderText("כתוב הודעה ל-ChatGPT")
         self.input.setMaximumHeight(110)
+        self.input.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        self.input.setAlignment(Qt.AlignmentFlag.AlignRight)
         layout.addWidget(self.input)
         self.send=QPushButton("שלח")
         self.send.setEnabled(False)
@@ -69,7 +73,7 @@ class MainWindow(QMainWindow):
         self.chat.append("מנסה לשחזר חיבור לחשבון ChatGPT באופן מאובטח...")
         self.restore_login()
         self.chat.append("התחברות משתמשת במכסת המנוי המורשית, לא במפתח API נפרד.")
-        self.chat.append("הסוכן רשאי להציע פתיחת תוכנות וקבצים בתיקייה ייעודית, עד 5 פעולות לבקשה; לפני שינוי או קריאת תוכן תידרש הסכמתך.")
+        self.chat.append("הסוכן יכול לבדוק חלונות, יישומים, רכיבי ממשק ומסמכים, ולבקש הרשאות לפעולות מחשב. חלק מהיישומים עדיין אינם נגישים לאוטומציה.")
         root.setStyleSheet("QWidget{font-family:Segoe UI;font-size:14px} QPushButton{padding:10px;border-radius:8px;background:#2060b8;color:white} QTextEdit,QComboBox{padding:7px;border:1px solid #bac8d8;border-radius:7px}")
 
     def pause_agent(self):
@@ -150,7 +154,8 @@ class MainWindow(QMainWindow):
         threading.Thread(target=worker,daemon=True).start()
 
     def reply(self,text):
-        self.chat.append("ChatGPT: "+text)
+        self.chat.moveCursor(__import__("PySide6.QtGui",fromlist=["QTextCursor"]).QTextCursor.MoveOperation.End)
+        self.chat.insertPlainText("\nChatGPT: "+text+"\n")
 
     def finish(self):
         self.send.setEnabled(bool(self.auth.access_token and self.model.count()))
