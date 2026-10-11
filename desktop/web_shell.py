@@ -42,7 +42,8 @@ class Bridge(QObject):
   self.available_models=[]
   self.logins_in_progress=False
   self.attachments=[]
-  self.agent=OpenAIComputerAgent(self.auth,self.approve,self.propose,workshop=self.workshop)
+  self.agent=OpenAIComputerAgent(self.auth,self.approve,self.propose,workshop=self.workshop,
+    on_capability_draft=lambda info:self.events.extension_draft.emit(info))
   # Background token refresh: do not block the main HTML window.
   threading.Thread(target=self.restore,daemon=True).start()
  def emit(self,kind,**fields):
