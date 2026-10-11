@@ -137,7 +137,11 @@ class OpenAIComputerAgent:
                 record("state", "הפעולות הופסקו")
                 status = "cancelled"
                 break
-            record("state", "שלב " + str(index + 1) + " — ניתוח הפעולה הבאה")
+            if journal is not None and task_id is not None:
+                try:
+                    journal.event(task_id, "state", "שלב " + str(index + 1) + " — ניתוח הפעולה הבאה")
+                except (OSError, ValueError):
+                    pass
             try:
                 raw = self.signin.response(INSTRUCTIONS + "\n\n" + objective +
                     "\n\nCompleted steps:\n" + "\n".join(history[-6:]), model)
