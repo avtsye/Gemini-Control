@@ -199,6 +199,17 @@ class Bridge(QObject):
   except (ValueError,TypeError) as e:
    return self.encode({"error":"כדי להתקין יש לצרף תוכנית JSON תקינה: "+str(e)})
 
+ @Slot(str,result=str)
+ def example_capability(self,kind):
+  templates={"audio":"audio_tone.py","video":"video_gif.py"}
+  if kind not in templates:return self.encode({"error":"דוגמה לא קיימת"})
+  try:
+   source=(Path(__file__).resolve().parent/"examples"/templates[kind]).read_text(encoding="utf-8")
+   name="מחולל WAV" if kind=="audio" else "מחולל אנימציית GIF"
+   identifier=self.workshop.draft(name,"דוגמה מקומית בקוד Python — נדרשת בדיקה לפני הפעלה",source)
+   return self.encode({"id":identifier})
+  except (OSError,ValueError) as e:return self.encode({"error":str(e)})
+
  @Slot(result=str)
  def capabilities(self):
   return self.encode({"items":self.workshop.list()})
