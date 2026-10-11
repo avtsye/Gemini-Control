@@ -111,6 +111,12 @@ class DesktopAgent:
             if tool=="media_engines":return engines()
             if tool=="probe_media":return probe_media(self.workspace,args.get("name"),self.approval)
             return convert_media(self.workspace,args.get("source"),args.get("target"),self.approval)
+        if tool=="edit_image":
+            from image_tools import edit_image
+            return edit_image(self.workspace,args.get("source"),args.get("target"),self.approval,
+                              args.get("rotate",0),args.get("brightness",1.0),
+                              args.get("contrast",1.0),args.get("crop"),
+                              args.get("grayscale",False))
         if tool in {"image_info","convert_image"}:
             from image_tools import image_info,convert_image
             if tool=="image_info":
