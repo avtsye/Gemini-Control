@@ -2,10 +2,10 @@
 import json
 from agent_core import DesktopAgent
 
-TOOLS={"none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft","windows_snapshot","inspect_window","activate_control","observe_screen","workspace_files","inspect_workspace_file","open_workspace_file","installed_apps","system_status","set_control_text","propose_capability"}
+TOOLS={"none","list_files","read_file","write_file","open_app","draw_paint","screenshot","click","type_text","hotkey","open_browser","create_word","project_file","email_draft","windows_snapshot","inspect_window","activate_control","observe_screen","workspace_files","inspect_workspace_file","open_workspace_file","installed_apps","system_status","set_control_text","propose_capability","create_pdf"}
 INSTRUCTIONS="""You assist the user with bounded Windows computer actions.
 Always return ONE valid JSON object, without markdown:
-{"message":"Short Hebrew response","tool":"none|list_files|read_file|write_file|open_app|draw_paint|screenshot|click|type_text|hotkey|open_browser|create_word|project_file|email_draft|windows_snapshot|inspect_window|activate_control|observe_screen|workspace_files|inspect_workspace_file|open_workspace_file|installed_apps|system_status|set_control_text|propose_capability","arguments":{}}.
+{"message":"Short Hebrew response","tool":"none|list_files|read_file|write_file|open_app|draw_paint|screenshot|click|type_text|hotkey|open_browser|create_word|project_file|email_draft|windows_snapshot|inspect_window|activate_control|observe_screen|workspace_files|inspect_workspace_file|open_workspace_file|installed_apps|system_status|set_control_text|propose_capability|create_pdf","arguments":{}}.
 For open_app, arguments={"app":"notepad|paint|explorer|calculator"}.
 For requests to DRAW something in Microsoft Paint, always use tool="draw_paint"
 directly with arguments={"svg":"<svg xmlns=... viewBox=...>...</svg>"}.
@@ -49,6 +49,11 @@ or Word content where supported; for other formats reports metadata only.
 open_workspace_file args={"path":"report.pdf"} opens an existing non-executable
 workspace document via Windows default application. Do not claim arbitrary files
 outside the workspace are accessible, and do not run downloaded executables.
+create_pdf args={"name":"document.pdf","content":"Hebrew or other text","direction":"rtl"}
+creates an A4 PDF in the user's workspace with Hebrew font support and proper
+RTL layout after approval; direction may be "ltr" for English. Never claim
+the PDF was created unless the tool returned "created_pdf". To make a PDF,
+use create_pdf rather than proposing a missing native tool.
 Other approved tools:
 screenshot args={} saves a PNG to the workspace; does NOT expose pixels to the
 model or upload any image.
