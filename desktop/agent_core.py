@@ -24,6 +24,10 @@ class DesktopAgent:
         if not self.enabled:
             raise PermissionError("Agent is paused")
         args = arguments if isinstance(arguments, dict) else {}
+        if tool=="search_knowledge":
+            from knowledge_search import search_knowledge
+            return search_knowledge(self.workspace,args.get("query"),args.get("folder"),
+                                    self.approval,args.get("limit",8))
         if tool in {"installed_apps","system_status"}:
             if not self.approval("לאסוף מידע על "+("התוכנות המותקנות" if tool=="installed_apps" else "מצב משאבי המחשב")+" ולשלוח אותו למודל?"):
                 return {"cancelled":True}
