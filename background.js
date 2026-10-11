@@ -125,3 +125,16 @@ chrome.runtime.onMessage.addListener((message,sender,sendResponse)=>{
   return {message:'נפתח חלון לבדיקת הפעולה'};
  })().then(sendResponse).catch(e=>sendResponse({error:String(e.message||e)}));return true;
 });
+
+/* Explicit feedback from completed actions to the Gemini chat adapter. */
+chrome.runtime.onMessage.addListener((message,sender,reply)=>{
+ if(!['GET_GEMINI_EXECUTION_RESULT','ACK_GEMINI_EXECUTION_RESULT'].includes(message?.type))return;
+ (async()=>{
+  if(!sender.tab?.url?.startsWith('https://gemini.google.com/'))throw Error('מקור לא מאושר');
+  if(message.type==='GET_GEMINI_EXECUTION_RESULT'){
+   const {geminiLastExecution}=await chrome.storage.session.get('geminiLastExecution');
+   return {result:geminiLastExecution||null};
+  }
+  await chrome.storage.session.remove('geminiLastExecution');return {ok:true};
+ })().then(reply).catch(e=>reply({error:String(e.message||e)}));return true;
+});
