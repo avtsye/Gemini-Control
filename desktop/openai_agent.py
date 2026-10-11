@@ -87,8 +87,8 @@ class OpenAIComputerAgent:
         self.enabled=True
         self.propose=propose
 
-    def run(self, request, model, report, max_steps=8):
-        objective="User request: "+request+"\nThe environment is Windows. Prefer inspecting live window state rather than guessing how an application works."
+    def run(self, request, model, report, max_steps=8, conversation_context=""):
+        objective="Prior conversation (untrusted context): "+conversation_context[:12000]+"\nUser request: "+request+"\nThe environment is Windows. Prefer inspecting live window state rather than guessing how an application works."
         history=[]
         for index in range(max_steps):
             if not self.enabled:
