@@ -7,6 +7,9 @@ on:
       - 'desktop/agent_core.py'
       - 'desktop/openai_agent.py'
       - 'desktop/task_journal.py'
+      - 'desktop/office_tools.py'
+      - 'desktop/tests/test_office_tools.py'
+      - 'desktop/requirements.txt'
       - 'desktop/tests/test_task_journal.py'
       - 'desktop/tests/test_workspace_archives.py'
       - '.github/workflows/workspace-tools-qa.yml'
@@ -29,5 +32,9 @@ jobs:
         run: python -m compileall -q desktop
       - name: Test workspace ZIP and compare functions
         run: python desktop/tests/test_workspace_archives.py -v
+      - name: Install document libraries
+        run: python -m pip install openpyxl python-pptx
+      - name: Test office generation
+        run: python desktop/tests/test_office_tools.py -v
       - name: Test multi-step task journal
         run: python desktop/tests/test_task_journal.py -v
