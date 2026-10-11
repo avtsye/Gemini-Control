@@ -49,9 +49,12 @@ class DesktopAgent:
                                       self.approval,args.get("rate",170))
             return transcribe_local(self.workspace,args.get("source"),args.get("model_directory"),
                                     args.get("target"),self.approval,args.get("language","he"))
-        if tool in {"ocr_engines","ocr_image"}:
-            from ocr_tools import ocr_engines,ocr_image
+        if tool in {"ocr_engines","ocr_image","ocr_pdf"}:
+            from ocr_tools import ocr_engines,ocr_image,ocr_pdf
             if tool=="ocr_engines":return ocr_engines()
+            if tool=="ocr_pdf":
+                return ocr_pdf(self.workspace,args.get("source"),args.get("target"),self.approval,
+                               args.get("language","heb+eng"),args.get("max_pages",12))
             return ocr_image(self.workspace,args.get("source"),args.get("target"),
                              self.approval,args.get("language","heb+eng"))
         if tool in {"media_engines","probe_media","convert_media"}:
