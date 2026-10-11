@@ -134,11 +134,11 @@ class BridgeHost {
   if(command=="recent_log"){string[] lines=File.Exists(LogPath)?File.ReadAllLines(LogPath):new string[0];int start=Math.Max(0,lines.Length-30);var recent=new List<string>();for(int i=start;i<lines.Length;i++)recent.Add(lines[i]);return new{id=id,ok=true,lines=recent};}
   if(!Enabled())return new{id=id,ok=false,error="Bridge is disabled. Enable it in the control panel."};
   if(command=="list_apps")return new {id=id,ok=true,apps=new string[]{"notepad","calculator","explorer","paint"}};
-  if(command=="inspect_controls")return new{id=id,ok=true,controls=AccessibleWindows.Inspect()};
+  if(command=="inspect_controls")return new{id=id,ok=true,inspection=AccessibleWindows.Inspect()};
   if(command=="click_control"){
    int index=Coord(data,"index",-1);string expected=Str(data,"label");
    if(expected.Length<1||expected.Length>100)throw new ArgumentException("Missing control label");
-   string result=AccessibleWindows.Activate(index,expected);Audit("click_control",result);return new{id=id,ok=true,message=result};
+   string result=AccessibleWindows.Activate(Str(data,"handle"),index,expected);Audit("click_control",result);return new{id=id,ok=true,message=result};
   }
   if(command=="list_windows")return Windows(id);
   if(command=="type_text")return TypeText(data,id);
