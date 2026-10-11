@@ -36,6 +36,9 @@ class DesktopAgent:
             if tool == "create_zip":
                 return create_zip(self.workspace,args.get("sources"),args.get("target"),self.approval)
             return extract_zip(self.workspace,args.get("archive"),args.get("destination"),self.approval)
+        if tool=="fetch_page":
+            from internet_tools import fetch_page
+            return fetch_page(args.get("url"),self.approval)
         if tool in {"move_workspace_file","sevenzip_status"}:
             from file_organizer import move_workspace_file,sevenzip_status
             if tool=="sevenzip_status":return sevenzip_status()
