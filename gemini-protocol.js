@@ -15,9 +15,10 @@
   const copy=document.createElement('button');copy.textContent='העתק הנחיה (חלופה)';
   const feedback=document.createElement('button');feedback.textContent='החזר תוצאה לשיחת Gemini';
   const execute=document.createElement('button');execute.textContent='בדוק את הפעולה האחרונה';execute.disabled=true;
+  const acknowledged=document.createElement('button');acknowledged.textContent='שלחתי את המשוב — סמן כהוחזר';
   const diagnostic=document.createElement('button');diagnostic.textContent='בדיקת חיבור';
   const status=document.createElement('span');status.textContent='כתוב בקשה הכוללת "השתמש בתוסף"';
-  panel.append(info,prepare,copy,execute,feedback,diagnostic,status);shadow.append(style,panel);
+  panel.append(info,prepare,copy,execute,feedback,acknowledged,diagnostic,status);shadow.append(style,panel);
   Object.assign(host.style,{position:'fixed',bottom:'18px',right:'18px',zIndex:2147483647});
   (document.body||document.documentElement).append(host);
   function composer(){
@@ -33,6 +34,7 @@
     else {el.textContent=text}
     el.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertText',data:text}));
   }
+  acknowledged.onclick=async()=>{if(!confirm('האם הודעת המשוב נשלחה בפועל לשיחת Gemini?'))return;try{const r=await chrome.runtime.sendMessage({type:'ACK_GEMINI_EXECUTION_RESULT'});if(r?.error)throw Error(r.error);status.textContent='המשוב סומן כהוחזר'}catch(e){status.textContent='שגיאה: '+e.message}};
   feedback.onclick=async()=>{
     try {
       const r=await chrome.runtime.sendMessage({type:'GET_GEMINI_EXECUTION_RESULT'});
@@ -102,7 +104,7 @@
     const editor=composer();
     if(!editor||!(editor===event.target||editor.contains(event.target)))return;
     const request=getText(editor);
-    if(!trigger.test(request)||request.includes('You can propose operations for the user'))return;
+    if(!trigger.test(request)||request.includes('You can propose operations for the user')||request.includes('תוצאת ביצוע הפעולה באמצעות Gemini Control'))return;
     event.preventDefault();event.stopImmediatePropagation();
     prepare.click();
     status.textContent='צורפה הנחיית התוסף. בדוק ושלח שוב ב-Enter.';
