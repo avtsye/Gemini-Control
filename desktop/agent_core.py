@@ -30,7 +30,7 @@ class DesktopAgent:
                 return analyze_csv(self.workspace,args.get("source"),self.approval)
             return chart_csv(self.workspace,args.get("source"),args.get("target"),
                              args.get("label_column"),args.get("value_column"),self.approval)
-        if tool=="search_knowledge":
+        if tool=="ranked_workspace_search":
             from knowledge_search import search_knowledge
             return search_knowledge(self.workspace,args.get("query"),args.get("folder"),
                                     self.approval,args.get("limit",8))
