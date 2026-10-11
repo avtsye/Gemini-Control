@@ -11,3 +11,4 @@ keyring>=25,<27
 pypdf>=5,<7
 openpyxl>=3.1,<4
 python-pptx>=1.0,<2
+Pillow>=11,<13
