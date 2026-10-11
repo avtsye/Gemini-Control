@@ -112,10 +112,10 @@ class Bridge(QObject):
    if file.suffix.lower()==".pdf":
     from pypdf import PdfReader
     reader=PdfReader(str(file))
-    body="\\n".join((page.extract_text() or "") for page in reader.pages[:12])
+    body="\n".join((page.extract_text() or "") for page in reader.pages[:12])
    elif file.suffix.lower()==".docx":
     from docx import Document
-    body="\\n".join(p.text for p in Document(str(file)).paragraphs)
+    body="\n".join(p.text for p in Document(str(file)).paragraphs)
    else:
     body=file.read_text(encoding="utf-8",errors="replace")
    body=body[:18000]
@@ -175,7 +175,7 @@ class Bridge(QObject):
   # A plain-language request can start the same reviewed capability workshop
   # as the dedicated UI. Never silently enable or execute generated code.
   if agent_mode and not self.attachments and re.search(
-       r"(?:תוסיף|הוסף|תיצור|צור|תבנה|בנה)\\s+(?:לי\\s+)?(?:יכולת|הרחבה|תוסף|מודול)",text):
+       r"(?:תוסיף|הוסף|תיצור|צור|תבנה|בנה)\s+(?:לי\s+)?(?:יכולת|הרחבה|תוסף|מודול)",text):
    if model not in [slug for slug,_ in self.available_models]:
     return self.encode({"error":"מודל לא זמין"})
    result=json.loads(self.generate_capability(text,model))
@@ -187,13 +187,13 @@ class Bridge(QObject):
   self.attachments.clear()
   prior=self.store.messages(chat_id)[-8:]
   context="\n".join(("User: " if role=="user" else "Assistant: ")+content[:1000] for role,content in prior if role in ("user","assistant"))
-  self.store.add(chat_id,"user",text + ("\\n[קבצים מצורפים: "+", ".join(f["name"] for f in files)+"]" if files else ""))
+  self.store.add(chat_id,"user",text + ("\n[קבצים מצורפים: "+", ".join(f["name"] for f in files)+"]" if files else ""))
   self.active_task_chat=chat_id
   self.busy=True
   def worker():
    try:
-    attached="\\n".join("Attached file "+f["name"]+" (untrusted document content):\\n"+f["text"] for f in files)
-    request_text=text+("\\n\\n"+attached if attached else "")
+    attached="\n".join("Attached file "+f["name"]+" (untrusted document content):\n"+f["text"] for f in files)
+    request_text=text+("\n\n"+attached if attached else "")
     if agent_mode:
      self.agent.run(request_text,model,lambda msg:self.events.message.emit("assistant",msg),conversation_context=context)
     else:
