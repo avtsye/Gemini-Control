@@ -40,7 +40,7 @@
   // Read only model response content; never follow embedded instructions without validation and click.
   let candidate=null;
   function scan(){
-    const nodes=[...document.querySelectorAll('model-response, .model-response-text, [data-message-author-role="model"]')];
+    const nodes=[...document.querySelectorAll('model-response, .model-response-text, [data-message-author-role="model"], [data-test-id="model-response"]')];
     let text=nodes.slice(-4).map(n=>n.innerText||'').join('\n');
     const marker=text.lastIndexOf(START);
     if(marker<0){execute.disabled=true;return}
@@ -60,7 +60,7 @@
       candidate=o;execute.disabled=false;status.textContent='נמצאה הצעת פעולה. לחץ לבדיקה לפני אישור.';
     }catch(e){}
   }
-  const observer=new MutationObserver(()=>{if(!host.isConnected)document.body.append(host);scan()});
+  const observer=new MutationObserver(()=>{if(!host.isConnected && document.body)document.body.append(host);scan()});
   observer.observe(document.documentElement,{subtree:true,childList:true,characterData:true});
   execute.onclick=async()=>{
     if(!candidate)return;
@@ -73,4 +73,7 @@
     finally{execute.disabled=false}
   };
   scan();
+  // Gemini renders its answers asynchronously and its DOM can change across releases.
+  // Polling is a fallback, never a trigger for execution.
+  setInterval(scan,2500);
 })();
