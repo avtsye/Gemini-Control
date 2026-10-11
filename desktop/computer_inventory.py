@@ -26,7 +26,12 @@ def installed_applications(limit=200):
     return {"installed_apps":list(result.values())[:limit],"truncated":len(result)>limit}
 
 def system_status():
-    import psutil
+    try:
+        import psutil
+    except ImportError:
+        return {"system":platform.system(),"release":platform.release(),
+                "error":"psutil is missing from this installation",
+                "action":"Install desktop/requirements.txt and rebuild the EXE"}
     memory=psutil.virtual_memory()
     return {"system":platform.system(),"release":platform.release(),
             "cpu_percent":psutil.cpu_percent(interval=0.1),
