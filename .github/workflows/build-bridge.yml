@@ -25,4 +25,5 @@ jobs:
             windows-bridge/BridgeHost.cs
             windows-bridge/GeminiControlBridge.exe
             windows-bridge/Install-Bridge.ps1
+            windows-bridge/SETUP.cmd
             windows-bridge/README.md
