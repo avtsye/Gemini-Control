@@ -9,7 +9,7 @@ $source=Join-Path $here 'BridgeHost.cs'
 $exe=Join-Path $here 'GeminiControlBridge.exe'
 if (-not (Test-Path $source)){throw "Missing BridgeHost.cs"}
 Write-Host 'Building minimal bridge with Windows PowerShell/.NET Framework...'
-Add-Type -Path $source -OutputAssembly $exe -OutputType ConsoleApplication -ReferencedAssemblies @('System.Web.Extensions.dll','System.Drawing.dll')
+Add-Type -Path $source -OutputAssembly $exe -OutputType ConsoleApplication -ReferencedAssemblies @('System.Web.Extensions.dll','System.Drawing.dll','System.Windows.Forms.dll')
 $manifest=Join-Path $here 'org.gemini_control.bridge.json'
 $data=@{
   name='org.gemini_control.bridge'
