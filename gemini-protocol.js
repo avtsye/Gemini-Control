@@ -12,9 +12,10 @@
   const panel=document.createElement('div');
   const info=document.createElement('small');info.textContent='Gemini Control — הסוכן שלך בתוך השיחה';
   const prepare=document.createElement('button');prepare.textContent='הכן הוראת סוכן ב-Gemini';
+  const copy=document.createElement('button');copy.textContent='העתק הנחיה (חלופה)';
   const execute=document.createElement('button');execute.textContent='בדוק את הפעולה האחרונה';execute.disabled=true;
   const status=document.createElement('span');status.textContent='כתוב בקשה הכוללת "השתמש בתוסף"';
-  panel.append(info,prepare,execute,status);shadow.append(style,panel);
+  panel.append(info,prepare,copy,execute,status);shadow.append(style,panel);
   Object.assign(host.style,{position:'fixed',bottom:'18px',right:'18px',zIndex:2147483647});
   (document.body||document.documentElement).append(host);
   function composer(){
@@ -30,6 +31,7 @@
     else {el.textContent=text}
     el.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertText',data:text}));
   }
+  copy.onclick=async()=>{const editor=composer(),request=getText(editor);if(!trigger.test(request)){status.textContent='כתוב בקשה עם "השתמש בתוסף"';return}try{await navigator.clipboard.writeText(request+'\n\n'+protocol);status.textContent='ההנחיה הועתקה. הדבק אותה בשיחה ושלח.'}catch(e){status.textContent='העתקה נכשלה: '+e.message}};
   prepare.onclick=()=>{
     const editor=composer(),request=getText(editor);
     if(!editor){status.textContent='לא נמצאה תיבת ההקלדה של Gemini';return}
