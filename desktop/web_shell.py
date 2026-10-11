@@ -397,6 +397,10 @@ class Bridge(QObject):
       "Clearly explain limits in description. User request: "+description)
     obj=json.loads(self.auth.response(prompt,model))
     identifier=self.workshop.draft(obj["name"],obj.get("description",""),obj["source"])
+    folder=self.workshop._path(identifier)
+    metadata=self.workshop._manifest(folder)
+    metadata["require_test"]=True
+    self.workshop._write_manifest(folder,metadata)
     # Generated code stays disabled. Automated review may propose repairs,
     # but every actual execution needs an explicit user approval.
     findings=[]
