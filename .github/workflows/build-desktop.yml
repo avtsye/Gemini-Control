@@ -27,6 +27,7 @@ jobs:
           python desktop/tests/test_workspace_archives.py -v
           python desktop/tests/test_task_journal.py -v
           python desktop/tests/test_office_tools.py -v
+          python desktop/tests/test_workspace_data.py -v
           python desktop/tests/test_media_examples.py -v
           python desktop/tests/test_ui_contract.py -v
           python desktop/tests/test_generic_computer.py -v
