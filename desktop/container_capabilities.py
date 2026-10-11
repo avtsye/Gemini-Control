@@ -39,7 +39,7 @@ def run_plugin(source,output,payload,timeout=20):
         "print(json.dumps({'result':m['run'](json.loads(sys.stdin.read()),'/out')},ensure_ascii=True,default=str))"]
     try:
         result=subprocess.run(command,input=json.dumps(payload,ensure_ascii=True),
-            text=True,encoding="utf-8",capture_output=True,shell=False,
+            text=True,encoding="utf-8",errors="replace",capture_output=True,shell=False,
             timeout=max(1,min(int(timeout),60)))
     except subprocess.TimeoutExpired:
         return {"error":"Isolated plugin timed out"}
