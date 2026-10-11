@@ -9,7 +9,18 @@ $source=Join-Path $here 'BridgeHost.cs'
 $exe=Join-Path $here 'GeminiControlBridge.exe'
 if (-not (Test-Path $source)){throw "Missing BridgeHost.cs"}
 Write-Host 'Building minimal bridge with Windows PowerShell/.NET Framework...'
-Add-Type -Path @($source,(Join-Path $here 'AccessibleWindows.cs')) -OutputAssembly $exe -OutputType ConsoleApplication -ReferencedAssemblies @('System.Web.Extensions.dll','System.Drawing.dll','System.Windows.Forms.dll','UIAutomationClient.dll','UIAutomationTypes.dll')
+$refs = @('System.Web.Extensions.dll','System.Drawing.dll','System.Windows.Forms.dll')
+$frameworks = @(
+  (Join-Path ${env:ProgramFiles(x86)} 'Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8'),
+  (Join-Path $env:WINDIR 'Microsoft.NET\Framework\v4.0.30319\WPF'),
+  (Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\WPF')
+)
+foreach ($assembly in @('UIAutomationClient.dll','UIAutomationTypes.dll')) {
+  $resolved = $frameworks | ForEach-Object { Join-Path $_ $assembly } | Where-Object { Test-Path $_ } | Select-Object -First 1
+  if (-not $resolved) { throw "Missing Windows UI Automation assembly: $assembly" }
+  $refs += $resolved
+}
+Add-Type -Path @($source,(Join-Path $here 'AccessibleWindows.cs')) -OutputAssembly $exe -OutputType ConsoleApplication -ReferencedAssemblies $refs
 $manifest=Join-Path $here 'org.gemini_control.bridge.json'
 $data=@{
   name='org.gemini_control.bridge'
