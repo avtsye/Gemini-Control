@@ -71,7 +71,7 @@ class VoiceRecorder(QObject):
             if final:self.parts.append(final)
         self.recording=False
         self.audio.stop()
-        data=b"".join(self.parts)[:self.MAX_SECONDS*self.sample_rate*self.channels*2]
+        data=b"".join(self.parts)[:int(self.MAX_SECONDS*self.sample_rate*self.channels*2)]
         self.parts=[]
         self.device=None
         self.audio=None
