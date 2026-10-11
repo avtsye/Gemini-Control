@@ -219,6 +219,30 @@ class Bridge(QObject):
   self.agent.enabled=not self.agent.enabled
   self.agent.local.enabled=self.agent.enabled
   return self.encode({"message":"הסוכן פעיל" if self.agent.enabled else "פעולות הסוכן מושבתות"})
+ @Slot(str,str,str,result=str)
+ def compare_models(self,text,first,second):
+  if self.busy:return self.encode({"error":"משימה אחרת פעילה"})
+  allowed={slug for slug,_ in self.available_models}
+  if first not in allowed or second not in allowed or first==second:
+   return self.encode({"error":"בחר שני מודלים שונים וזמינים"})
+  if not isinstance(text,str) or not text.strip() or len(text)>12000:
+   return self.encode({"error":"הודעה אינה תקינה"})
+  if not self.auth.access_token:return self.encode({"error":"יש להתחבר תחילה"})
+  chat_id=self.chat_id
+  self.store.add(chat_id,"user",text+" [השוואת מודלים]")
+  self.active_task_chat=chat_id
+  self.busy=True
+  def worker():
+   try:
+    for model in (first,second):
+     try:
+      answer=self.auth.response(text,model)
+      self.events.message.emit("assistant","### "+model+"\\n"+answer)
+     except Exception as exc:
+      self.events.message.emit("system_note","המודל "+model+" נכשל: "+str(exc)[:300])
+   finally:self.events.finished.emit()
+  threading.Thread(target=worker,daemon=True).start()
+  return self.encode({"started":True})
  @Slot(str,str,bool,result=str)
  def send(self,text,model,agent_mode):
   if self.busy:return self.encode({"error":"המשימה הקודמת עדיין פועלת"})
