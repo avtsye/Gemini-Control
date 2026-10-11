@@ -38,6 +38,9 @@ class DesktopAgent:
         if not self.enabled:
             raise PermissionError("Agent is paused")
         args = arguments if isinstance(arguments, dict) else {}
+        if tool == "draw_paint":
+            from drawing_tool import draw_in_paint
+            return draw_in_paint(args.get("svg"), self.workspace, self.approval)
         if tool == "list_files":
             self.workspace.mkdir(parents=True, exist_ok=True)
             return {"files": [p.name for p in self.workspace.iterdir() if p.is_file() and not p.is_symlink()][:100]}
@@ -45,7 +48,7 @@ class DesktopAgent:
             path = self._file(args.get("name"))
             if path.stat().st_size > 50000:
                 raise ValueError("File exceeds read limit")
-            if not self.approval("קריאת הקובץ " + path.name + " ושליחת התוכן ל-Gemini"):
+            if not self.approval("קריאת הקובץ " + path.name + " ושליחת התוכן למודל ChatGPT"):
                 return {"cancelled": True}
             return {"name": path.name, "content": path.read_text(encoding="utf-8")}
         if tool == "write_file":
