@@ -60,6 +60,11 @@ async function capabilityWorkshop(){
  const description=document.createElement('textarea');description.placeholder='למשל: צור קובץ WAV של מנגינה לפי תווים ותדרים';description.style.border='1px solid #bbb';body.append(description);
  const create=element('button','צור קוד הרחבה לבדיקה',body);
  create.onclick=()=>call('generate_capability',description.value,$('models').value).then(()=>notify('יוצר טיוטת יכולת…')).catch(e=>notify(e.message,'error'));
+ element('h3','דוגמאות מוכנות',body);
+ for(const [kind,name] of [['audio','צור טיוטת מחולל שמע WAV'],['video','צור טיוטת אנימציית GIF']]){
+  const sample=element('button',name,body);
+  sample.onclick=()=>call('example_capability',kind).then(d=>inspectCapability(d.id)).catch(e=>notify(e.message,'error'));
+ }
  const data=await call('capabilities');
  for(const item of data.items){
    element('h3',item.name+' ('+item.status+')',body);
