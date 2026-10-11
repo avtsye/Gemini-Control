@@ -9,6 +9,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
+using System.Windows.Forms;
 
 class BridgeHost {
  static readonly JavaScriptSerializer Json=new JavaScriptSerializer();
@@ -118,7 +119,7 @@ class BridgeHost {
    if(c=='\r')continue;
    if(c=='\n'){SendKeys.SendWait("{ENTER}");continue;}
    if(char.IsControl(c))continue;
-   SendKeys.SendWait(c=='{'?"{{}":c=='}'?"{}}":c=='+ '?"{+}":c=='+'?"{+}":c=='^'?"{^}":c=='%'?"{%}":c=='~'?"{~}":c=='('?"{(}":c==')'?"{)}":c.ToString());
+   SendKeys.SendWait(c=='{'?"{{}":c=='}'?"{}}":c=='+'?"{+}":c=='^'?"{^}":c=='%'?"{%}":c=='~'?"{~}":c=='('?"{(}":c==')'?"{)}":c.ToString());
   }
   Audit("type_text","approved_window");return new{id=id,ok=true,message="Text sent to active approved application"};
  }
