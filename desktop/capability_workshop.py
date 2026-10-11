@@ -217,7 +217,7 @@ class CapabilityWorkshop:
         interpreter=str(executable) if executable.is_file() else sys.executable
         try:
             process=subprocess.run([interpreter,str(runner),str(folder/"main.py"),str(output)],
-                input=json.dumps(payload,ensure_ascii=False),text=True,capture_output=True,
+                input=json.dumps(payload,ensure_ascii=False),text=True,encoding="utf-8",capture_output=True,
                 cwd=str(folder),timeout=min(max(timeout,1),30),shell=False)
             passed=process.returncode==0
             details=(process.stdout if passed else process.stderr)[-1500:]
@@ -270,7 +270,7 @@ class CapabilityWorkshop:
         executable=folder/"venv"/("Scripts/python.exe" if os.name=="nt" else "bin/python")
         interpreter=str(executable) if executable.is_file() else sys.executable
         result=subprocess.run([interpreter,str(runner),str(folder/"main.py"),str(output_dir)],
-            input=json.dumps(payload,ensure_ascii=False),capture_output=True,text=True,
+            input=json.dumps(payload,ensure_ascii=False),capture_output=True,text=True,encoding="utf-8",
             timeout=timeout,cwd=str(folder),shell=False)
         if result.returncode:
             return {"error":"Extension failed","details":result.stderr[-1200:]}
