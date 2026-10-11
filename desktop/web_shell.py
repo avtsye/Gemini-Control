@@ -137,6 +137,22 @@ class Bridge(QObject):
   threading.Thread(target=worker,daemon=True).start()
   return self.encode({"started":True})
 
+ @Slot(str,str,result=str)
+ def local_ai_status(self,embedding_folder,image_folder):
+  try:
+   from semantic_tools import embedding_status
+   from local_image_generation import image_model_status
+   from speech_tools import speech_status
+   from ocr_tools import ocr_engines
+   from media_tools import engines
+   workspace=self.agent.local.workspace
+   return self.encode({"workspace":str(workspace),
+     "embedding":embedding_status(workspace,embedding_folder),
+     "image":image_model_status(workspace,image_folder),
+     "speech":speech_status(),"ocr":ocr_engines(),"media":engines(),
+     "note":"Models and optional Python packages are never downloaded automatically."})
+  except (ValueError,OSError,ImportError) as exc:
+   return self.encode({"error":"אבחון המודלים המקומיים נכשל: "+str(exc)[:240]})
  @Slot(result=str)
  def session(self):
   return self.encode({"models":self.available_models,
