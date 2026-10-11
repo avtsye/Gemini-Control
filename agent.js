@@ -28,6 +28,7 @@ async function native(command,app){
   });
  });
 }
+$('request').addEventListener('keydown',e=>{if(e.ctrlKey&&e.key==='Enter')$('plan').click()});
 $('plan').onclick=async()=>{
  if(working)return;
  plan=null;index=0;draw();status('Gemini מתכנן את המשימה...');$('plan').disabled=true;
@@ -54,7 +55,9 @@ $('execute').onclick=async()=>{
  finally{working=false;draw()}
 };
 $('stop').onclick=()=>{if(working)return;plan=null;index=0;draw();status('התוכנית בוטלה');log('המשתמש ביטל את התוכנית')};
-$('check').onclick=async()=>{try{const r=await native('ping');status('מחובר לגשר');log('חיבור תקין: '+r.message)}catch(e){status('אין חיבור לגשר: '+e.message)}};
+async function checkBridge(){const c=$('connection');c.textContent='בודק חיבור למחשב…';try{const r=await native('ping');c.textContent='✓ הגשר מחובר ומוכן לפעולה';$('setupHelp').classList.add('hidden');log('חיבור תקין: '+r.message)}catch(e){c.textContent='הגשר לא מחובר';$('setupHelp').classList.remove('hidden');log('אין חיבור: '+e.message)}}
+$('check').onclick=checkBridge;
+checkBridge();
 $('files').onclick=()=>chrome.tabs.create({url:chrome.runtime.getURL('workspace.html')});
 $('clear').onclick=()=>{$('log').textContent='היומן נוקה'};
 chrome.storage.session.get('geminiPendingRequest').then(x=>{if(typeof x.geminiPendingRequest==='string'){$('request').value=x.geminiPendingRequest}}).catch(()=>{});
