@@ -30,6 +30,7 @@ class ConversationEnhancementsTests(unittest.TestCase):
   first=self.db.create("Export")
   self.db.add(first,"user","export text")
   self.db.set_flags(first,pinned=True,project="Project A")
+  self.db.set_project_memory("Project A","Project instructions for this workspace")
   backup=self.db.export_history()
   with tempfile.TemporaryDirectory() as other:
    target=ConversationStore(pathlib.Path(other)/"import.sqlite3")
@@ -38,6 +39,7 @@ class ConversationEnhancementsTests(unittest.TestCase):
    restored=target.chats_detailed()[0]
    self.assertNotEqual(restored[0],first)
    self.assertEqual(restored[4],"Project A")
+   self.assertEqual(target.project_memory("Project A"),"Project instructions for this workspace")
    self.assertEqual(target.messages(restored[0]),[("user","export text")])
  def test_reject_invalid_restore(self):
   with self.assertRaises(ValueError):self.db.restore_history({"version":1,"conversations":[],"messages":[["missing","assistant","x","now"]]})
