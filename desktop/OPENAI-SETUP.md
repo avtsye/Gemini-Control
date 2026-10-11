@@ -12,7 +12,7 @@ The primary Windows EXE now uses **OpenAI's official open-source Sign in with Ch
 - Old Gemini code remains in the repository for reference, but is no longer the default EXE entry point.
 
 ## Important limitations
-**This initial release validates the account integration and chat only. It does not yet execute the AI's computer instructions.** The prior allowlisted file/app operations remain available in `desktop/agent_core.py`, and a permissioned tool-call adapter can be added after authenticated chat is verified.
+**This is an initial, limited Windows agent, not unrestricted desktop automation.** When the computer-agent checkbox is enabled, OpenAI can propose up to five actions per task: list, read or write files in a dedicated workspace, or open one of four allowlisted programs. Reads/writes and app launches require confirmation; unknown commands are rejected. There is no full mouse/keyboard automation or arbitrary shell.
 
 ChatGPT plan usage is subject to eligibility and usage limits. Official plan usage draws from included ChatGPT Work/Codex usage where applicable; it is not a way around those limits. No additional API key is needed; the app does consume **eligible plan usage**, and should not be described as unlimited or zero-usage. If sign-in is denied, do not pretend it succeeded or fall back to paid API calls.
 
