@@ -78,7 +78,7 @@ class UIContract(unittest.TestCase):
  def test_inline_javascript_syntax(self):
   executable=shutil.which("node")
   if not executable:self.skipTest("Node.js is not installed")
-  blocks=re.findall(r"<script(?:\\s[^>]*)?>([\\s\\S]*?)</script>",self.html)
+  blocks=re.findall(r"<script[^>]*>(.*?)</script>",self.html,re.S)
   scripts=[b for b in blocks if b.strip()]
   self.assertTrue(scripts,"Expected inline application script")
   for source in scripts:
