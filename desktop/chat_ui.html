@@ -111,6 +111,11 @@ $('extensions').onclick=()=>extensions().catch(e=>notify(e.message,'error'));
 $('toolsCatalog').onclick=async()=>{try{
  const data=await call('tools_catalog');
  const body=modal('רשימת כלים זמינים לסוכן');
+ element('h3','35 היכולות המבוקשות',body);
+ for(const cap of (data.coverage||[])){
+   const row=element('p',(cap.status==='missing'?'○ חסר':'◐ חלקי')+' — '+cap.name,body);
+   row.title=cap.tools.length?'כלים קיימים: '+cap.tools.join(', '):'טרם נוצר כלי שלם';
+ }
  element('h3','כלים מובנים · '+data.native_tools.length,body);
  element('p',data.native_tools.join(' · '),body);
  element('h3','פונקציות שפותחו · '+data.capabilities.length,body);
