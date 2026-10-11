@@ -7,6 +7,7 @@ on:
       - 'desktop/web_shell.py'
       - 'desktop/conversation_store.py'
       - 'desktop/tests/test_conversation_enhancements.py'
+      - 'desktop/tests/test_ui_contract.py'
       - '.github/workflows/ui-validation.yml'
   workflow_dispatch:
 permissions:
@@ -30,6 +31,8 @@ jobs:
           '@ | python -
       - name: Check JavaScript parser
         run: node --check desktop/chat_ui_check.js
+      - name: Validate UI and Qt bridge contract
+        run: python desktop/tests/test_ui_contract.py -v
       - name: Verify conversation data enhancements
         run: python desktop/tests/test_conversation_enhancements.py -v
       - name: Verify existing conversation behavior
