@@ -83,3 +83,25 @@ chrome.runtime.onMessage.addListener((message,sender,sendResponse)=>{
   })().then(sendResponse).catch(e=>sendResponse({error:String(e.message||e)}));
   return true;
 });
+
+chrome.runtime.onMessage.addListener((message,sender,sendResponse)=>{
+ if(message?.type!=='GEMINI_WEBSITE_ACTION')return;
+ (async()=>{
+  if(!sender.tab?.url?.startsWith('https://gemini.google.com/'))throw Error('מקור לא מורשה');
+  const a=message.action;
+  if(!a||a.version!==1||!['question','open_app','drawing_svg'].includes(a.type))throw Error('פורמט לא נתמך');
+  const result={version:1,type:a.type,description:String(a.description||'').slice(0,400)};
+  if(a.type==='open_app'){
+   if(!['notepad','calculator','explorer','paint'].includes(a.app))throw Error('תוכנה לא מורשית');
+   result.app=a.app;
+  }
+  if(a.type==='question')result.question=String(a.question||'איזו תוכנה תרצה להשתמש?').slice(0,500);
+  if(a.type==='drawing_svg'){
+   if(typeof a.svg!=='string'||a.svg.length>25000||!a.svg.trim().startsWith('<svg'))throw Error('ציור לא תקין');
+   result.svg=a.svg;
+  }
+  await chrome.storage.session.set({pendingWebsiteAction:result});
+  await chrome.tabs.create({url:chrome.runtime.getURL('action-review.html')});
+  return {message:'נפתח חלון לבדיקת הפעולה'};
+ })().then(sendResponse).catch(e=>sendResponse({error:String(e.message||e)}));return true;
+});
